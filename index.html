@@ -11,8 +11,7 @@
         <h2>VKT Transport</h2>
         <div class="nav-links">
             <button onclick="showPage('dashboard')" id="btn-dashboard" class="active">Dashboard</button>
-            <button onclick="showPage('manage')" id="btn-manage">จัดการ Invoice (รอชำระ)</button>
-            <button onclick="showPage('history')" id="btn-history">ประวัติย้อนหลัง</button>
+            <button onclick="showPage('manage')" id="btn-manage">จัดการ Invoice (ข้อมูลทั้งหมด)</button>
         </div>
     </nav>
 
@@ -49,46 +48,44 @@
 
     <div id="manage" class="page-content">
         <div class="dashboard-header">
-            <h3>รายการบิลรอรับชำระ</h3>
-            <div class="filter-group">
-                <select id="pendingMonthFilter" onchange="renderManageInvoices()"><option value="all">ทุกเดือนที่ค้าง</option></select>
-                <button class="btn-confirm" onclick="openAddModal()" style="margin-left: 15px;">➕ เพิ่ม Invoice ใหม่</button>
-            </div>
+            <h3>รายการ Invoice ทั้งหมด</h3>
+            <button class="btn-confirm" onclick="openAddModal()">➕ เพิ่ม Invoice ใหม่</button>
         </div>
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
+        
+        <div class="filter-grid">
+            <select id="flt-year" onchange="renderManageInvoices()"><option value="all">ปีทั้งหมด</option></select>
+            <select id="flt-month" onchange="renderManageInvoices()"><option value="all">เดือนทั้งหมด</option></select>
+            <select id="flt-day" onchange="renderManageInvoices()"><option value="all">วันทั้งหมด</option></select>
+            <select id="flt-user" onchange="renderManageInvoices()"><option value="all">คนลงข้อมูลทั้งหมด</option></select>
+            <select id="flt-status" onchange="renderManageInvoices()"><option value="all">สถานะทั้งหมด</option></select>
+            <input type="text" id="flt-customer" placeholder="ค้นหาชื่อลูกค้า..." onkeyup="renderManageInvoices()">
+        </div>
+
+        <div class="table-container" style="max-height: 70vh; overflow-y: auto;">
+            <table class="data-table" id="master-table">
+                <thead style="position: sticky; top: 0; z-index: 2;">
                     <tr>
+                        <th class="bg-orange text-center">No.</th>
                         <th class="bg-orange text-left">Invoice No.</th>
-                        <th class="bg-orange text-left">ลูกค้า</th>
+                        <th class="bg-orange text-left">ชื่อลูกค้า</th>
                         <th class="bg-orange text-center">วันที่ใช้งาน</th>
                         <th class="bg-orange text-center">ใช้โดย</th>
+                        <th class="bg-orange text-left">รายละเอียด</th>
                         <th class="bg-orange">ค่าตู้</th>
                         <th class="bg-orange">ค่าเที่ยว</th>
                         <th class="bg-orange">ค่าบริการ</th>
-                        <th class="bg-orange">ยอดชำระสุทธิ</th>
+                        <th class="bg-orange text-center">วันที่รับยอด CS</th>
+                        <th class="bg-orange text-center">วันที่ได้รับชำระ</th>
+                        <th class="bg-orange">WH1%</th>
+                        <th class="bg-orange">WH3%</th>
+                        <th class="bg-orange">ยอดชำระ</th>
+                        <th class="bg-orange text-center">สถานะ</th>
+                        <th class="bg-orange text-left">สาเหตุยกเลิก</th>
+                        <th class="bg-orange text-center">ผู้รับยอด</th>
                         <th class="bg-orange text-center">จัดการ</th>
                     </tr>
                 </thead>
-                <tbody id="manage-body"><tr><td colspan="9" class="text-center text-gray">กำลังโหลดข้อมูล...</td></tr></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="history" class="page-content">
-        <div class="dashboard-header"><h3>ประวัติ Invoice ทั้งหมด</h3></div>
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th class="bg-orange text-left">Invoice No.</th>
-                        <th class="bg-orange text-left">ลูกค้า</th>
-                        <th class="bg-orange text-center">วันที่ใช้งาน</th>
-                        <th class="bg-orange">ยอดชำระ</th>
-                        <th class="bg-orange text-center">สถานะ</th>
-                    </tr>
-                </thead>
-                <tbody id="history-body"><tr><td colspan="5" class="text-center text-gray">กำลังโหลดข้อมูล...</td></tr></tbody>
+                <tbody id="manage-body"><tr><td colspan="18" class="text-center text-gray">กำลังโหลดข้อมูล...</td></tr></tbody>
             </table>
         </div>
     </div>
@@ -132,36 +129,39 @@
     </div>
 
     <div id="paymentModal" class="modal-overlay">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
-                <h3>อัปเดตสถานะรับชำระเงิน</h3>
+                <h3>อัปเดต / รับชำระเงิน</h3>
                 <span class="close-btn" onclick="closeModal('paymentModal')">&times;</span>
             </div>
             <form id="paymentForm">
                 <div class="modal-body">
-                    <p style="margin-bottom: 15px; color: #4b5563;">กำลังทำรายการ: <strong id="modal-invNo" style="color:#2563eb;"></strong> (<span id="modal-customer"></span>)</p>
+                    <p style="margin-bottom: 10px; font-size: 14px; color: #4b5563;">อัปเดตข้อมูล: <strong id="modal-invNo" style="color:#2563eb;"></strong> (<span id="modal-customer"></span>)</p>
                     <input type="hidden" id="pay-invNo">
-                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                        <div class="form-group"><label>ค่าตู้</label><input type="number" step="0.01" id="pay-fee1"></div>
+                        <div class="form-group"><label>ค่าเที่ยว</label><input type="number" step="0.01" id="pay-fee2"></div>
+                        <div class="form-group"><label>ค่าบริการ</label><input type="number" step="0.01" id="pay-fee3"></div>
                         <div class="form-group"><label>วันที่รับยอด CS</label><input type="date" id="pay-csDate"></div>
                         <div class="form-group"><label>วันที่ได้รับชำระ</label><input type="date" id="pay-payDate"></div>
-                        <div class="form-group"><label>WH 1%</label><input type="number" step="0.01" id="pay-wh1" value="0"></div>
-                        <div class="form-group"><label>WH 3%</label><input type="number" step="0.01" id="pay-wh3" value="0"></div>
-                        <div class="form-group"><label>ยอดชำระจริง</label><input type="number" step="0.01" id="pay-totalPay" value="0" required></div>
                         <div class="form-group"><label>ผู้บันทึกการรับยอด</label><input type="text" id="pay-checker" list="checkerList"></div>
+                        <div class="form-group"><label>WH 1%</label><input type="number" step="0.01" id="pay-wh1"></div>
+                        <div class="form-group"><label>WH 3%</label><input type="number" step="0.01" id="pay-wh3"></div>
+                        <div class="form-group"><label>ยอดชำระจริง</label><input type="number" step="0.01" id="pay-totalPay" required style="background:#e2e8f0; font-weight:bold;" readonly></div>
                         <div class="form-group">
                             <label>สถานะ *</label>
                             <select id="pay-status" required onchange="toggleModalCancel()">
-                                <option value="รับชำระแล้ว">รับชำระแล้ว</option>
                                 <option value="ปกติ">ปกติ (ยังไม่จ่าย)</option>
+                                <option value="รับชำระแล้ว">รับชำระแล้ว</option>
                                 <option value="ยกเลิก">ยกเลิกบิล</option>
                             </select>
                         </div>
-                        <div class="form-group" id="pay-cancelGroup" style="display: none;"><label>สาเหตุที่ยกเลิก</label><input type="text" id="pay-cancelReason"></div>
+                        <div class="form-group full-width" id="pay-cancelGroup" style="display: none;"><label>สาเหตุที่ยกเลิก</label><input type="text" id="pay-cancelReason"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('paymentModal')">ยกเลิก</button>
-                    <button type="submit" class="btn-confirm" id="btn-paySubmit">บันทึกชำระเงิน</button>
+                    <button type="submit" class="btn-confirm" id="btn-paySubmit">บันทึกข้อมูล</button>
                 </div>
                 <div id="modal-message" class="msg" style="margin: 0 20px 20px;"></div>
             </form>
