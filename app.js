@@ -103,7 +103,7 @@ function setInitialFilter() {
 
 async function fetchInitialData() {
     try {
-        const res = await fetch(`${SCRIPT_URL}?action=getInitialData`, { redirect: 'follow' });
+        const res = await fetch(`${SCRIPT_URL}?action=getInitialData`);
         const data = await res.json();
         
         const uList = document.getElementById('usedByList');
@@ -421,7 +421,6 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
     try {
         const res = await fetch(SCRIPT_URL, { 
             method: 'POST', 
-            redirect: 'follow', // ป้องกัน Error การดักจับของเบราว์เซอร์
             body: JSON.stringify(payload), 
             headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
         });
@@ -481,7 +480,6 @@ async function deleteInvoice() {
     try {
         const res = await fetch(SCRIPT_URL, { 
             method: 'POST', 
-            redirect: 'follow',
             body: JSON.stringify({action: 'delete', invoiceNo: invNo}), 
             headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
         });
@@ -514,7 +512,6 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     try {
         const res = await fetch(SCRIPT_URL, { 
             method: 'POST', 
-            redirect: 'follow',
             body: JSON.stringify(payload), 
             headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
         });
@@ -525,19 +522,18 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     finally { btn.disabled = false; btn.innerText = '💾 บันทึกแก้ไข'; }
 });
 
+// 🚀 ยิงคำสั่งแบบ GET พร้อมฝังค่ากันแคช
 async function syncOldData() {
     const btn = document.getElementById('btn-sync');
     btn.disabled = true;
     btn.innerText = '⏳ กำลังดึงข้อมูล...';
 
     try {
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            redirect: 'follow', // สำคัญมาก ป้องกัน Failed to fetch
-            body: JSON.stringify({ action: 'syncOldData' }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        });
+        // ใช้ GET request และใส่ Timestamp เพื่อให้เบราว์เซอร์มองเป็น URL ใหม่เสมอ (แก้ปัญหาโดนแคชหน้า HTML)
+        const cacheBuster = new Date().getTime();
+        const url = `${SCRIPT_URL}?action=syncOldData&t=${cacheBuster}`;
         
+        const res = await fetch(url);
         const data = await res.json();
         
         if (data.status === 'success') {
@@ -547,7 +543,7 @@ async function syncOldData() {
             alert("❌ เกิดข้อผิดพลาดฝั่งระบบ: " + data.message);
         }
     } catch (err) {
-        alert("❌ การเชื่อมต่อขัดข้อง: " + err.message + "\n(กรุณาเช็คว่าเอา URL ตัวใหม่มาใส่และกด Deploy ใน Apps Script แล้ว)");
+        alert("❌ การเชื่อมต่อขัดข้อง: " + err.message + "\n(กรุณากด 'การนำไปใช้งานใหม่' ใน Apps Script ให้เรียบร้อย)");
     } finally {
         btn.disabled = false;
         btn.innerText = '🔄 ดึงบิลจากระบบเก่า';
