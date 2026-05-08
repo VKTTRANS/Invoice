@@ -6,10 +6,9 @@ let sortCol = 'Invoice No.';
 let sortAsc = true; 
 let currentPage = 1;
 
-// จัดการ Event listener และดึงข้อมูลรวดเดียว
 window.onload = async function() {
     setupEventListeners();
-    await fetchInitialData(); // ดึงข้อมูลแบบ 2 in 1 เพื่อความรวดเร็ว
+    await fetchInitialData(); 
 };
 
 function setupEventListeners() {
@@ -59,13 +58,11 @@ function setInitialFilter() {
     }
 }
 
-// 🚀 ฟังก์ชันใหม่: ดึง Dropdown และ Invoice มาพร้อมกันในครั้งเดียว (โหลดไวขึ้น 2 เท่า)
 async function fetchInitialData() {
     try {
         const res = await fetch(`${SCRIPT_URL}?action=getInitialData`);
         const data = await res.json();
         
-        // เซ็ตค่า Dropdown
         const uList = document.getElementById('usedByList');
         if(data.users && uList) { uList.innerHTML = ''; data.users.forEach(n => uList.innerHTML += `<option value="${n}">`); }
         
@@ -75,7 +72,6 @@ async function fetchInitialData() {
         const custList = document.getElementById('customerList');
         if(data.customers && custList) { custList.innerHTML = ''; data.customers.forEach(n => custList.innerHTML += `<option value="${n}">`); }
         
-        // เซ็ตค่าตาราง Invoice
         allInvoiceData = data.invoices || [];
         setupFilters();
         renderDashboard();
@@ -136,13 +132,11 @@ function resetFilters() {
     resetPageAndRender();
 }
 
-// 🛠️ คำนวณภาษี และย้ำการแสดงผล "ยอดรวมก่อนหัก"
 function calculateTaxes(prefix, source = 'fee') {
     let f1 = Number(document.getElementById(`${prefix}-fee1`).value) || 0; 
     let f2 = Number(document.getElementById(`${prefix}-fee2`).value) || 0; 
     let f3 = Number(document.getElementById(`${prefix}-fee3`).value) || 0; 
     
-    // คำนวณยอดรวมก่อนหัก
     let subTotal = f1 + f2 + f3;
     let subTotalInput = document.getElementById(`${prefix}-subTotal`);
     if(subTotalInput) subTotalInput.value = subTotal.toFixed(2);
@@ -158,9 +152,7 @@ function calculateTaxes(prefix, source = 'fee') {
     let wh1 = Number(wh1Input.value) || 0;
     let wh3 = Number(wh3Input.value) || 0;
     
-    // ยอดวางบิลสุทธิ (หลังหัก WH แล้ว)
     let expectedPay = subTotal - wh1 - wh3;
-    
     document.getElementById(`${prefix}-totalPay`).value = expectedPay.toFixed(2);
     
     calculateDiff(prefix);
@@ -322,7 +314,7 @@ function renderManageInvoices() {
         tbody.innerHTML += `<tr class="clickable-row" onclick="openDetailModal('${row["Invoice No."]}')">
             <td class="col-no">${row["No."]}</td>
             <td class="col-inv" style="color:#2563eb; font-weight:bold;">${row["Invoice No."]}</td>
-            <td class="col-text">${row["ชื่อลูกค้า"]}</td>
+            <td class="col-text" title="${row["ชื่อลูกค้า"]}">${row["ชื่อลูกค้า"]}</td>
             <td class="col-date">${du}</td>
             <td class="col-date">${dcs}</td>
             <td class="text-center">${row["ใช้โดย"]}</td>
@@ -400,7 +392,6 @@ function openDetailModal(invNo) {
     document.getElementById('det-fee2').value = Number(row["ค่าเที่ยว"]) || 0;
     document.getElementById('det-fee3').value = Number(row["ค่าบริการ"]) || 0;
     
-    // ดึงค่า WH เดิมที่บันทึกไว้มาแสดง
     document.getElementById('det-wh1').value = Number(row["WH1%"]) || 0;
     document.getElementById('det-wh3').value = Number(row["WH3%"]) || 0;
     
@@ -415,7 +406,6 @@ function openDetailModal(invNo) {
     document.getElementById('det-status').value = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
     document.getElementById('det-cancelReason').value = row["สาเหตุที่ยกเลิก"] || "";
     
-    // โหลดค่าเสร็จแล้ว คำนวณยอดรวมใหม่ เพื่อแสดงผล
     calculateTaxes('det', 'init'); 
     toggleDetCancel();
     document.getElementById('detailModal').style.display = 'flex';
@@ -464,3 +454,33 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     } catch (err) { msg.classList.add('error'); msg.innerText = err.message; } 
     finally { btn.disabled = false; btn.innerText = '💾 บันทึกแก้ไข'; }
 });
+
+// ==========================================
+// ฟังก์ชันดึงข้อมูลจาก Web App (Sheet) ตัวเก่า
+// ==========================================
+async function syncOldData() {
+    const btn = document.getElementById('btn-sync');
+    btn.disabled = true;
+    btn.innerText = '⏳ กำลังดึงข้อมูล...';
+
+    try {
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'syncOldData' }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            alert(data.message);
+            await fetchInitialData(); 
+        } else {
+            alert("❌ เกิดข้อผิดพลาด: " + data.message);
+        }
+    } catch (err) {
+        alert("❌ การเชื่อมต่อขัดข้อง: " + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = '🔄 ดึงบิลจากระบบเก่า';
+    }
+}
