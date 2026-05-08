@@ -114,15 +114,26 @@ function resetFilters() {
     resetPageAndRender();
 }
 
-function calculateTaxes(prefix) {
+// source = 'fee' (เปลี่ยนค่าใช้จ่าย ระบบช่วยคำนวณ WH ออโต้)
+// source = 'wh' หรือ 'init' (ดึงค่าจาก DB หรือพิมพ์แก้เอง ไม่ต้องคำนวณ WH ทับ)
+function calculateTaxes(prefix, source = 'fee') {
     let f1 = Number(document.getElementById(`${prefix}-fee1`).value) || 0; 
     let f2 = Number(document.getElementById(`${prefix}-fee2`).value) || 0; 
     let f3 = Number(document.getElementById(`${prefix}-fee3`).value) || 0; 
-    let wh1 = f2 * 0.01; let wh3 = f3 * 0.03;
+    
+    let wh1Input = document.getElementById(`${prefix}-wh1`);
+    let wh3Input = document.getElementById(`${prefix}-wh3`);
+
+    if (source === 'fee') {
+        wh1Input.value = (f2 * 0.01).toFixed(2);
+        wh3Input.value = (f3 * 0.03).toFixed(2);
+    }
+    
+    let wh1 = Number(wh1Input.value) || 0;
+    let wh3 = Number(wh3Input.value) || 0;
+    
     let expectedPay = (f1 + f2 + f3) - wh1 - wh3;
     
-    document.getElementById(`${prefix}-wh1`).value = wh1.toFixed(2);
-    document.getElementById(`${prefix}-wh3`).value = wh3.toFixed(2);
     document.getElementById(`${prefix}-totalPay`).value = expectedPay.toFixed(2);
     
     calculateDiff(prefix);
@@ -141,8 +152,12 @@ function calculateDiff(prefix) {
     else diffInput.style.color = '#0f172a';
 }
 
-['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add')));
-['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det')));
+// Listener เมื่อแก้ตัวเลข
+['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'fee')));
+['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'fee')));
+
+['add-wh1', 'add-wh3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'wh')));
+['det-wh1', 'det-wh3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'wh')));
 
 document.getElementById('add-actualPay')?.addEventListener('input', () => calculateDiff('add'));
 document.getElementById('det-actualPay')?.addEventListener('input', () => calculateDiff('det'));
@@ -381,6 +396,11 @@ function openDetailModal(invNo) {
     document.getElementById('det-fee1').value = Number(row["ค่าตู้"]) || 0;
     document.getElementById('det-fee2').value = Number(row["ค่าเที่ยว"]) || 0;
     document.getElementById('det-fee3').value = Number(row["ค่าบริการ"]) || 0;
+    
+    // ดึงค่า WH เดิมที่บันทึกไว้มาแสดง (ไม่ทับด้วยค่าคำนวณใหม่)
+    document.getElementById('det-wh1').value = Number(row["WH1%"]) || 0;
+    document.getElementById('det-wh3').value = Number(row["WH3%"]) || 0;
+    
     const sd = (v) => v ? new Date(v).toISOString().split('T')[0] : "";
     document.getElementById('det-useDate').value = sd(row["วันที่ใช้งาน"]);
     document.getElementById('det-csDate').value = sd(row["วันที่รับยอด CS"]);
@@ -392,7 +412,8 @@ function openDetailModal(invNo) {
     document.getElementById('det-status').value = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
     document.getElementById('det-cancelReason').value = row["สาเหตุที่ยกเลิก"] || "";
     
-    calculateTaxes('det'); 
+    // โหลดค่าเสร็จแล้ว คำนวณยอดรวมโดย 'init' แปลว่าไม่ต้องคำนวณ WH ทับ
+    calculateTaxes('det', 'init'); 
     toggleDetCancel();
     document.getElementById('detailModal').style.display = 'flex';
 }
