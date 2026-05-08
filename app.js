@@ -102,7 +102,17 @@ function renderDashboard() {
                 let w1 = Number(row["WH1%"]) || 0;
                 let w3 = Number(row["WH3%"]) || 0;
                 let toPay = income - w1 - w3;
-                let paid = row["สถานะ"] === "รับชำระแล้ว" ? (Number(row["ยอดชำระ"]) || 0) : 0;
+                
+                // --- ส่วนที่แก้ไขให้ดึงข้อมูลเก่าได้อัตโนมัติ ---
+                // เช็คว่าช่อง "วันที่ได้รับชำระ" มีข้อมูลหรือไม่
+                let hasPayDate = row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "";
+                // ถือว่าจ่ายแล้ว ถ้าสถานะคือ "รับชำระแล้ว" หรือ มีการใส่วันที่รับเงิน
+                let isPaid = (row["สถานะ"] === "รับชำระแล้ว" || hasPayDate);
+                
+                // ถ้ารับเงินแล้วให้ดึงยอดจากคอลัมน์ยอดชำระ
+                let paid = isPaid ? (Number(row["ยอดชำระ"]) || 0) : 0;
+                // ----------------------------------------
+
                 let bal = toPay - paid;
 
                 mData[m].invCount++;
@@ -129,7 +139,8 @@ function renderDashboard() {
     tbody.innerHTML = '';
     mData.forEach(m => {
         let isZero = m.invCount === 0;
-        let balClass = isZero ? 'text-gray' : (m.balance > 0 ? 'text-red' : '');
+        // ถ้าคงเหลือน้อยกว่า 1 บาท (เช่น 0.00) ให้แสดงเป็นสีปกติ, ถ้าเหลือเยอะให้เป็นสีแดง
+        let balClass = isZero ? 'text-gray' : (m.balance > 0.01 ? 'text-red' : '');
         
         tbody.innerHTML += `
             <tr class="${isZero ? 'text-gray' : ''}">
@@ -182,7 +193,12 @@ function renderHistory() {
             if(!isNaN(d)) dateStr = d.toLocaleDateString('th-TH');
         }
         const total = Number(row["ยอดชำระ"]) ? Number(row["ยอดชำระ"]).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '0.00';
-        let statusClass = row["สถานะ"] === 'ยกเลิก' ? 'text-red' : (row["สถานะ"] === 'รับชำระแล้ว' ? 'text-green' : '');
+        
+        // ชดเชยกรณีข้อมูลเก่าไม่มีสถานะ แต่มีวันที่รับเงินแล้ว
+        let hasPayDate = row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "";
+        let displayStatus = row["สถานะ"] || (hasPayDate ? 'รับชำระแล้ว' : 'ปกติ');
+        
+        let statusClass = displayStatus === 'ยกเลิก' ? 'text-red' : (displayStatus === 'รับชำระแล้ว' ? 'text-green' : '');
         
         tbody.innerHTML += `
             <tr>
@@ -190,7 +206,7 @@ function renderHistory() {
                 <td class="text-left">${row["ชื่อลูกค้า"]}</td>
                 <td class="text-center">${dateStr}</td>
                 <td>${total}</td>
-                <td class="text-center"><span class="${statusClass}">${row["สถานะ"]}</span></td>
+                <td class="text-center"><span class="${statusClass}">${displayStatus}</span></td>
             </tr>
         `;
     });
