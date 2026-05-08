@@ -37,10 +37,16 @@ async function fetchDropdowns() {
     try {
         const res = await fetch(`${SCRIPT_URL}?action=getDropdowns`);
         const data = await res.json();
+        
         const uList = document.getElementById('usedByList');
         if(data.users && uList) { uList.innerHTML = ''; data.users.forEach(n => uList.innerHTML += `<option value="${n}">`); }
+        
         const cList = document.getElementById('checkerList');
         if(data.checkers && cList) { cList.innerHTML = ''; data.checkers.forEach(n => cList.innerHTML += `<option value="${n}">`); }
+        
+        const custList = document.getElementById('customerList');
+        if(data.customers && custList) { custList.innerHTML = ''; data.customers.forEach(n => custList.innerHTML += `<option value="${n}">`); }
+        
     } catch(e) { console.error(e); }
 }
 
@@ -119,7 +125,6 @@ function calculateTaxes(prefix) {
     document.getElementById(`${prefix}-wh3`).value = wh3.toFixed(2);
     document.getElementById(`${prefix}-totalPay`).value = expectedPay.toFixed(2);
     
-    // คำนวณผลต่าง
     calculateDiff(prefix);
 }
 
@@ -131,7 +136,6 @@ function calculateDiff(prefix) {
     let diffInput = document.getElementById(`${prefix}-diffPay`);
     diffInput.value = diff.toFixed(2);
     
-    // ให้สีแดงถ้าติดลบ ให้สีเขียวถ้าเป็นบวก
     if(diff < 0) diffInput.style.color = '#ef4444';
     else if(diff > 0) diffInput.style.color = '#10b981';
     else diffInput.style.color = '#0f172a';
@@ -140,7 +144,6 @@ function calculateDiff(prefix) {
 ['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add')));
 ['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det')));
 
-// Event listener เมื่อพิมพ์ยอดรับจริง ให้คำนวณผลต่างทันที
 document.getElementById('add-actualPay')?.addEventListener('input', () => calculateDiff('add'));
 document.getElementById('det-actualPay')?.addEventListener('input', () => calculateDiff('det'));
 
@@ -177,10 +180,9 @@ function renderDashboard() {
                 let f1 = Number(row["ค่าตู้"]) || 0; let f2 = Number(row["ค่าเที่ยว"]) || 0; let f3 = Number(row["ค่าบริการ"]) || 0;
                 let inc = f1 + f2 + f3;
                 let w1 = Number(row["WH1%"]) || 0; let w3 = Number(row["WH3%"]) || 0;
-                let toPay = inc - w1 - w3; // ยอดวางบิล
+                let toPay = inc - w1 - w3; 
                 let isPaid = (row["สถานะ"] === "รับชำระแล้ว" || (row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== ""));
                 
-                // ใช้คอลัมน์ "ยอดรับชำระจริง" ถ่าไม่มีให้ใช้ "ยอดชำระ" แบบเดิมไปก่อน
                 let actualVal = row["ยอดรับชำระจริง"] !== undefined && row["ยอดรับชำระจริง"] !== "" ? Number(row["ยอดรับชำระจริง"]) : Number(row["ยอดชำระ"]);
                 let paid = isPaid ? (actualVal || 0) : 0;
                 let bal = toPay - paid;
@@ -283,7 +285,7 @@ function renderManageInvoices() {
     }
 
     tbody.innerHTML = '';
-    if (paginatedData.length === 0) { tbody.innerHTML = '<tr><td colspan="15" class="text-center text-red">ไม่พบข้อมูล</td></tr>'; return; }
+    if (paginatedData.length === 0) { tbody.innerHTML = '<tr><td colspan="14" class="text-center text-red">ไม่พบข้อมูล</td></tr>'; return; }
     const fmt = (n) => Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2});
 
     paginatedData.forEach(row => {
@@ -292,13 +294,11 @@ function renderManageInvoices() {
         let dp = row["วันที่ได้รับชำระ"] ? new Date(row["วันที่ได้รับชำระ"]).toLocaleDateString('th-TH') : '';
         let ds = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
         
-        // จัดการสีสถานะที่หายไป
         let sc = '';
         if (ds === 'ยกเลิก') sc = 'text-red font-bold';
         else if (ds === 'รับชำระแล้ว') sc = 'text-green font-bold';
-        else sc = 'text-orange font-bold'; // สีส้มสำหรับ ปกติ(ยังไม่จ่าย)
+        else sc = 'text-orange font-bold';
 
-        // ตรวจสอบว่าคอลัมน์ใหม่มาหรือยัง ถ้ายังให้ใช้ของเดิมไปก่อน
         let actualPay = row["ยอดรับชำระจริง"] !== undefined && row["ยอดรับชำระจริง"] !== "" ? row["ยอดรับชำระจริง"] : row["ยอดชำระ"];
 
         tbody.innerHTML += `<tr class="clickable-row" onclick="openDetailModal('${row["Invoice No."]}')">
@@ -320,7 +320,27 @@ function renderManageInvoices() {
     });
 }
 
-function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
+function openAddModal() { 
+    let nextInv = "";
+    if (allInvoiceData && allInvoiceData.length > 0) {
+        let maxInv = 0;
+        allInvoiceData.forEach(row => {
+            let inv = String(row["Invoice No."]).trim();
+            if (/^\d+$/.test(inv)) { 
+                let num = parseInt(inv, 10);
+                if (num > maxInv) maxInv = num;
+            }
+        });
+        if (maxInv > 0) nextInv = (maxInv + 1).toString();
+    }
+    
+    document.getElementById('invoiceForm').reset();
+    document.getElementById('add-invoiceNo').value = nextInv; 
+    document.getElementById('add-status').value = "ปกติ"; 
+    
+    document.getElementById('addModal').style.display = 'flex'; 
+}
+
 function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
 
 document.getElementById('invoiceForm').addEventListener('submit', async function(e) {
@@ -367,7 +387,6 @@ function openDetailModal(invNo) {
     document.getElementById('det-payDate').value = sd(row["วันที่ได้รับชำระ"]);
     document.getElementById('det-checker').value = row["ผู้บันทึกการรับยอด"] || "";
     
-    // ตั้งค่าตัวแปรใหม่สำหรับหน้า Edit
     document.getElementById('det-actualPay').value = row["ยอดรับชำระจริง"] !== undefined && row["ยอดรับชำระจริง"] !== "" ? row["ยอดรับชำระจริง"] : row["ยอดชำระ"];
 
     document.getElementById('det-status').value = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
