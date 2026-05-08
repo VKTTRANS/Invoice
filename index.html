@@ -47,21 +47,42 @@
     </div>
 
     <div id="manage" class="page-content">
-        <div class="dashboard-header">
+        <div class="dashboard-header" style="border-bottom: none; padding-bottom: 0;">
             <h3>รายการ Invoice ทั้งหมด</h3>
             <button class="btn-confirm" onclick="openAddModal()">➕ เพิ่ม Invoice ใหม่</button>
         </div>
         
-        <div class="filter-grid">
-            <select id="flt-year" onchange="renderManageInvoices()"><option value="all">ปีทั้งหมด</option></select>
-            <select id="flt-month" onchange="renderManageInvoices()"><option value="all">เดือนทั้งหมด</option></select>
-            <select id="flt-day" onchange="renderManageInvoices()"><option value="all">วันทั้งหมด</option></select>
-            <select id="flt-user" onchange="renderManageInvoices()"><option value="all">คนลงข้อมูลทั้งหมด</option></select>
-            <select id="flt-status" onchange="renderManageInvoices()"><option value="all">สถานะทั้งหมด</option></select>
-            <input type="text" id="flt-customer" placeholder="ค้นหาชื่อลูกค้า..." onkeyup="renderManageInvoices()">
+        <div class="filter-card">
+            <div class="filter-item">
+                <label>ปี</label>
+                <select id="flt-year" onchange="renderManageInvoices()"><option value="all">ทั้งหมด</option></select>
+            </div>
+            <div class="filter-item">
+                <label>เดือน</label>
+                <select id="flt-month" onchange="renderManageInvoices()"><option value="all">ทั้งหมด</option></select>
+            </div>
+            <div class="filter-item">
+                <label>วัน</label>
+                <select id="flt-day" onchange="renderManageInvoices()"><option value="all">ทั้งหมด</option></select>
+            </div>
+            <div class="filter-item">
+                <label>คนลงข้อมูล</label>
+                <select id="flt-user" onchange="renderManageInvoices()"><option value="all">ทั้งหมด</option></select>
+            </div>
+            <div class="filter-item">
+                <label>สถานะ</label>
+                <select id="flt-status" onchange="renderManageInvoices()"><option value="all">ทั้งหมด</option></select>
+            </div>
+            <div class="filter-item">
+                <label>ค้นหาลูกค้า</label>
+                <input type="text" id="flt-customer" placeholder="พิมพ์ชื่อ..." onkeyup="renderManageInvoices()">
+            </div>
+            <div class="filter-item" style="justify-content: flex-end;">
+                <button class="btn-cancel" onclick="resetFilters()" style="margin: 0; height: 38px;">ล้างตัวกรอง</button>
+            </div>
         </div>
 
-        <div class="table-container" style="max-height: 70vh; overflow-y: auto;">
+        <div class="table-container" style="max-height: 65vh; overflow-y: auto;">
             <table class="data-table" id="master-table">
                 <thead style="position: sticky; top: 0; z-index: 2;">
                     <tr>
@@ -91,7 +112,7 @@
     </div>
 
     <div id="addModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-content" style="max-width: 850px;">
             <div class="modal-header">
                 <h3>บันทึก Invoice ใหม่</h3>
                 <span class="close-btn" onclick="closeModal('addModal')">&times;</span>
@@ -108,9 +129,9 @@
                     <div class="form-group"><label>ค่าบริการ (หัก 3%)</label><input type="number" step="0.01" id="add-fee3" value="0"></div>
                     <div class="form-group"><label>วันที่รับยอด CS</label><input type="date" id="add-csDate"></div>
                     <div class="form-group"><label>วันที่ได้รับชำระ</label><input type="date" id="add-payDate"></div>
-                    <div class="form-group"><label>WH 1% (อัตโนมัติ)</label><input type="number" step="0.01" id="add-wh1" value="0"></div>
-                    <div class="form-group"><label>WH 3% (อัตโนมัติ)</label><input type="number" step="0.01" id="add-wh3" value="0"></div>
-                    <div class="form-group"><label>ยอดชำระสุทธิ</label><input type="number" step="0.01" id="add-totalPay" value="0" readonly style="background:#e2e8f0; font-weight:bold;"></div>
+                    <div class="form-group"><label>WH 1% (อัตโนมัติ)</label><input type="number" step="0.01" id="add-wh1" value="0" readonly style="background:#f1f5f9;"></div>
+                    <div class="form-group"><label>WH 3% (อัตโนมัติ)</label><input type="number" step="0.01" id="add-wh3" value="0" readonly style="background:#f1f5f9;"></div>
+                    <div class="form-group"><label>ยอดชำระสุทธิ</label><input type="number" step="0.01" id="add-totalPay" value="0" readonly style="background:#e2e8f0; font-weight:bold; color:#0f172a;"></div>
                     <div class="form-group">
                         <label>สถานะ *</label>
                         <select id="add-status" required>
@@ -129,25 +150,25 @@
     </div>
 
     <div id="paymentModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-content" style="max-width: 850px;">
             <div class="modal-header">
                 <h3>อัปเดต / รับชำระเงิน</h3>
                 <span class="close-btn" onclick="closeModal('paymentModal')">&times;</span>
             </div>
             <form id="paymentForm">
                 <div class="modal-body">
-                    <p style="margin-bottom: 10px; font-size: 14px; color: #4b5563;">อัปเดตข้อมูล: <strong id="modal-invNo" style="color:#2563eb;"></strong> (<span id="modal-customer"></span>)</p>
+                    <p style="margin-bottom: 15px; font-size: 14px; color: #4b5563; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">กำลังอัปเดต: <strong id="modal-invNo" style="color:#2563eb; font-size: 16px;"></strong> (<span id="modal-customer"></span>)</p>
                     <input type="hidden" id="pay-invNo">
                     <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
-                        <div class="form-group"><label>ค่าตู้</label><input type="number" step="0.01" id="pay-fee1"></div>
-                        <div class="form-group"><label>ค่าเที่ยว</label><input type="number" step="0.01" id="pay-fee2"></div>
-                        <div class="form-group"><label>ค่าบริการ</label><input type="number" step="0.01" id="pay-fee3"></div>
+                        <div class="form-group"><label>ค่าตู้ (ไม่หัก WH)</label><input type="number" step="0.01" id="pay-fee1"></div>
+                        <div class="form-group"><label>ค่าเที่ยว (หัก 1%)</label><input type="number" step="0.01" id="pay-fee2"></div>
+                        <div class="form-group"><label>ค่าบริการ (หัก 3%)</label><input type="number" step="0.01" id="pay-fee3"></div>
                         <div class="form-group"><label>วันที่รับยอด CS</label><input type="date" id="pay-csDate"></div>
                         <div class="form-group"><label>วันที่ได้รับชำระ</label><input type="date" id="pay-payDate"></div>
                         <div class="form-group"><label>ผู้บันทึกการรับยอด</label><input type="text" id="pay-checker" list="checkerList"></div>
-                        <div class="form-group"><label>WH 1%</label><input type="number" step="0.01" id="pay-wh1"></div>
-                        <div class="form-group"><label>WH 3%</label><input type="number" step="0.01" id="pay-wh3"></div>
-                        <div class="form-group"><label>ยอดชำระจริง</label><input type="number" step="0.01" id="pay-totalPay" required style="background:#e2e8f0; font-weight:bold;" readonly></div>
+                        <div class="form-group"><label>WH 1% (อัตโนมัติ)</label><input type="number" step="0.01" id="pay-wh1" readonly style="background:#f1f5f9;"></div>
+                        <div class="form-group"><label>WH 3% (อัตโนมัติ)</label><input type="number" step="0.01" id="pay-wh3" readonly style="background:#f1f5f9;"></div>
+                        <div class="form-group"><label>ยอดชำระจริง</label><input type="number" step="0.01" id="pay-totalPay" required style="background:#e2e8f0; font-weight:bold; color:#0f172a;" readonly></div>
                         <div class="form-group">
                             <label>สถานะ *</label>
                             <select id="pay-status" required onchange="toggleModalCancel()">
