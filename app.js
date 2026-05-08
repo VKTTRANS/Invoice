@@ -26,44 +26,54 @@ window.onload = async function() {
 };
 
 function setupEventListeners() {
-    const moneyFields = ['add-fee1', 'add-fee2', 'add-fee3', 'add-wh1', 'add-wh3', 'add-actualPay', 'det-fee1', 'det-fee2', 'det-fee3', 'det-wh1', 'det-wh3', 'det-actualPay'];
+    // กำหนดช่องกรอกเงินทั้งหมดที่ต้องทำงาน
+    const moneyFields = [
+        'add-fee1', 'add-fee2', 'add-fee3', 'add-wh1', 'add-wh3', 'add-actualPay', 
+        'det-fee1', 'det-fee2', 'det-fee3', 'det-wh1', 'det-wh3', 'det-actualPay'
+    ];
     
     moneyFields.forEach(id => {
         const el = document.getElementById(id);
         if(!el) return;
 
-        // 1. ตอนคลิกเข้าไปแก้ไข
-        el.addEventListener('focus', function() {
+        // ฟังก์ชันเมื่อคลิกเข้าช่อง
+        const handleFocus = function() {
             let val = parseNum(this.value);
             if (val === 0) {
-                this.value = ''; // เคลียร์ศูนย์ออก พิมพ์สะดวก
+                this.value = ''; // ถ้าเป็นศูนย์ ล้างทิ้งให้ว่างเลย
             } else {
-                this.value = val; // ถอดลูกน้ำออกชั่วคราว ให้แก้เลขง่ายๆ
+                this.value = val; // ถ้ามีเลขอยู่ ถอดลูกน้ำออกให้แก้เฉพาะตัวเลข
+                setTimeout(() => this.select(), 10); // คลุมดำเผื่อพิมพ์ทับ
             }
-        });
+        };
 
-        // 2. ตอนพิมพ์ข้อมูล ระบบจะคำนวณแบบเรียลไทม์
+        // ดักจับทั้ง Focus และ Click เพื่อความชัวร์ในทุกเบราว์เซอร์
+        el.addEventListener('focus', handleFocus);
+        el.addEventListener('click', handleFocus);
+
+        // คำนวณแบบเรียลไทม์ตอนกำลังพิมพ์
         el.addEventListener('input', function() {
             let prefix = id.split('-')[0];
             if (id.includes('actualPay')) calculateDiff(prefix);
             else calculateTaxes(prefix, id.includes('wh') ? 'wh' : 'fee');
         });
 
-        // 3. ตอนคลิกออก (พิมพ์เสร็จแล้ว) ใส่ลูกน้ำกลับเข้าไปให้สวยงาม
+        // ฟังก์ชันเมื่อคลิกออกไปช่องอื่น
         el.addEventListener('blur', function() {
             if (this.value.trim() === '') {
-                this.value = '0.00'; // ถ้าปล่อยว่าง ให้กลับเป็น 0.00
+                this.value = '0.00'; // ถ้าปล่อยว่างไว้ ให้คืนค่า 0.00
             } else {
-                this.value = formatNum(this.value);
+                this.value = formatNum(this.value); // ใส่ลูกน้ำและทศนิยม .00
             }
             
-            // สั่งคำนวณย้ำอีกครั้งเพื่อความเป๊ะ
+            // สั่งคำนวณย้ำอีกครั้ง
             let prefix = id.split('-')[0];
             if (id.includes('actualPay')) calculateDiff(prefix);
             else calculateTaxes(prefix, id.includes('wh') ? 'wh' : 'fee');
         });
     });
 
+    // ให้ปรับสถานะออโต้เมื่อใส่วันที่
     document.getElementById('det-payDate')?.addEventListener('change', function() {
         const statusField = document.getElementById('det-status');
         if (this.value !== "" && statusField.value === "ปกติ") {
@@ -390,7 +400,6 @@ function openAddModal() {
     document.getElementById('add-invoiceNo').value = nextInv; 
     document.getElementById('add-status').value = "ปกติ"; 
 
-    // เซ็ตค่าเริ่มต้นให้เป็น 0.00 แทนที่จะเป็น 0
     ['add-fee1', 'add-fee2', 'add-fee3', 'add-wh1', 'add-wh3', 'add-actualPay', 'add-subTotal', 'add-totalPay', 'add-diffPay'].forEach(id => {
         document.getElementById(id).value = '0.00';
     });
@@ -405,7 +414,6 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
     const btn = document.getElementById('btn-addSubmit'); const msg = document.getElementById('add-message');
     btn.disabled = true; btn.innerText = 'กำลังบันทึก...'; msg.className = 'msg'; msg.innerText = '';
     
-    // แปลงข้อมูลที่ติดลูกน้ำให้กลับเป็นตัวเลขก่อนส่งไปเซฟที่ Google Sheets
     const payload = {
         action: 'add', invoiceNo: document.getElementById('add-invoiceNo').value, customer: document.getElementById('add-customer').value,
         useDate: document.getElementById('add-useDate').value, usedBy: document.getElementById('add-usedBy').value, details: document.getElementById('add-details').value,
@@ -441,7 +449,6 @@ function openDetailModal(invNo) {
     document.getElementById('det-usedBy').value = row["ใช้โดย"];
     document.getElementById('det-details').value = row["รายละเอียด"] || "";
     
-    // ดึงค่ามาจัด format ให้มีลูกน้ำ
     document.getElementById('det-fee1').value = formatNum(row["ค่าตู้"]);
     document.getElementById('det-fee2').value = formatNum(row["ค่าเที่ยว"]);
     document.getElementById('det-fee3').value = formatNum(row["ค่าบริการ"]);
@@ -489,7 +496,6 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     const btn = document.getElementById('btn-detSubmit'); const msg = document.getElementById('det-message');
     btn.disabled = true; btn.innerText = 'กำลังบันทึก...'; msg.className = 'msg'; msg.innerText = '';
     
-    // แปลงข้อมูลที่ติดลูกน้ำให้กลับเป็นตัวเลขก่อนส่งไปเซฟ
     const payload = {
         action: 'update', oldInvoiceNo: document.getElementById('det-oldInvNo').value,
         invoiceNo: document.getElementById('det-invoiceNo').value, customer: document.getElementById('det-customer').value,
