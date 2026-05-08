@@ -17,16 +17,25 @@
     </nav>
 
     <div id="dashboard" class="page-content active-page">
-        <h3>สรุปข้อมูล Invoice ทั้งหมด (Dashboard)</h3>
-        <div class="summary-cards">
-            <div class="card">
-                <h4>จำนวน Invoice ทั้งหมด</h4>
-                <h2 id="dash-count">0</h2>
-            </div>
-            <div class="card">
-                <h4>ยอดชำระรวม (ที่รับเงินแล้ว)</h4>
-                <h2 id="dash-total">0.00</h2>
-            </div>
+        <h3>สรุปยอดรับชำระรายเดือน ประจำปี</h3>
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                    <tr style="background-color: #e67e22;"> <th style="text-align: center;">เดือน</th>
+                        <th style="text-align: center;">จำนวน Inv</th>
+                        <th style="text-align: right;">ยอดรวมค่าตู้</th>
+                        <th style="text-align: right;">ยอดรวมค่าขนส่ง</th>
+                        <th style="text-align: right;">ยอดรวมค่าบริการ</th>
+                        <th style="text-align: right;">ยอดรวมรายได้</th>
+                        <th style="text-align: right;">ยอดรับชำระแล้ว</th>
+                    </tr>
+                </thead>
+                <tbody id="dashboard-body">
+                    <tr><td colspan="7" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>
+                </tbody>
+                <tfoot id="dashboard-foot" style="font-weight: bold; background-color: #ecf0f1;">
+                    </tfoot>
+            </table>
         </div>
     </div>
 
