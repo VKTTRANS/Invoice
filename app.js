@@ -6,6 +6,7 @@ function showPage(pageId) {
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active-page'));
     document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
     document.getElementById(pageId).classList.add('active-page');
+    
     if(pageId === 'dashboard') { document.getElementById('btn-dashboard').classList.add('active'); renderDashboard(); }
     if(pageId === 'manage') { document.getElementById('btn-manage').classList.add('active'); renderManageInvoices(); }
 }
@@ -20,10 +21,10 @@ async function fetchDropdowns() {
         const res = await fetch(`${SCRIPT_URL}?action=getDropdowns`);
         const data = await res.json();
         const uList = document.getElementById('usedByList');
-        if(data.users) { uList.innerHTML = ''; data.users.forEach(n => uList.innerHTML += `<option value="${n}">`); }
+        if(data.users && uList) { uList.innerHTML = ''; data.users.forEach(n => uList.innerHTML += `<option value="${n}">`); }
         const cList = document.getElementById('checkerList');
-        if(data.checkers) { cList.innerHTML = ''; data.checkers.forEach(n => cList.innerHTML += `<option value="${n}">`); }
-    } catch(e) { console.error("CORS Error - โปรดเช็คการ Deploy เป็น New Version", e); }
+        if(data.checkers && cList) { cList.innerHTML = ''; data.checkers.forEach(n => cList.innerHTML += `<option value="${n}">`); }
+    } catch(e) { console.error("Dropdown Fetch Note:", e); }
 }
 
 async function fetchAllData() {
@@ -32,8 +33,10 @@ async function fetchAllData() {
         allInvoiceData = await res.json();
         setupFilters();
         renderDashboard();
+        renderManageInvoices();
     } catch (error) {
-        document.getElementById('dashboard-body').innerHTML = `<tr><td colspan="11" class="text-center text-red">โหลดข้อมูลล้มเหลว ตรวจสอบการ Deploy Google Script</td></tr>`;
+        const dBody = document.getElementById('dashboard-body');
+        if(dBody) dBody.innerHTML = `<tr><td colspan="11" class="text-center text-red">โหลดข้อมูลล้มเหลว ตรวจสอบการ Deploy Google Script</td></tr>`;
     }
 }
 
@@ -44,6 +47,8 @@ function setupFilters() {
     const fltD = document.getElementById('flt-day');
     const fltU = document.getElementById('flt-user');
     const fltS = document.getElementById('flt-status');
+
+    if(!yFilter || !fltY) return; // ป้องกัน Error ถ้า DOM ยังไม่โหลด
 
     const years = new Set(), months = new Set(), days = new Set(), users = new Set(), statuses = new Set();
     
@@ -57,65 +62,62 @@ function setupFilters() {
             }
         }
         if (row["ใช้โดย"]) users.add(row["ใช้โดย"]);
-        if (row["สถานะ"]) statuses.add(row["สถานะ"]);
+        
+        // สถานะ: ถ้าว่าง แต่มีวันที่จ่ายแล้วให้เป็น รับชำระแล้ว
+        let displayStatus = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
+        statuses.add(displayStatus);
     });
 
-    // Populate Filters
-    yFilter.innerHTML = fltY.innerHTML = '<option value="all">ปีทั้งหมด</option>';
-    Array.from(years).sort((a, b) => b - a).forEach(y => {
-        yFilter.innerHTML += `<option value="${y}">${y}</option>`;
-        fltY.innerHTML += `<option value="${y}">${y}</option>`;
-    });
-
-    fltM.innerHTML = '<option value="all">เดือนทั้งหมด</option>';
+    yFilter.innerHTML = fltY.innerHTML = '<option value="all">ทั้งหมด</option>';
+    Array.from(years).sort((a, b) => b - a).forEach(y => { yFilter.innerHTML += `<option value="${y}">${y}</option>`; fltY.innerHTML += `<option value="${y}">${y}</option>`; });
+    
+    fltM.innerHTML = '<option value="all">ทั้งหมด</option>';
     Array.from(months).sort((a,b)=>a-b).forEach(m => fltM.innerHTML += `<option value="${m}">${thaiMonths[m]}</option>`);
 
-    fltD.innerHTML = '<option value="all">วันทั้งหมด</option>';
+    fltD.innerHTML = '<option value="all">ทั้งหมด</option>';
     Array.from(days).sort((a,b)=>a-b).forEach(d => fltD.innerHTML += `<option value="${d}">${d}</option>`);
 
-    fltU.innerHTML = '<option value="all">คนลงข้อมูลทั้งหมด</option>';
+    fltU.innerHTML = '<option value="all">ทั้งหมด</option>';
     Array.from(users).sort().forEach(u => fltU.innerHTML += `<option value="${u}">${u}</option>`);
 
-    fltS.innerHTML = '<option value="all">สถานะทั้งหมด</option>';
+    fltS.innerHTML = '<option value="all">ทั้งหมด</option>';
     Array.from(statuses).sort().forEach(s => fltS.innerHTML += `<option value="${s}">${s}</option>`);
     
-    // หากเคยเลือกล่าสุดไว้ ให้คืนค่า (เพื่อไม่ให้รีเซ็ตตอนโหลดใหม่)
-    if(yFilter.options.length > 1) {
-        let maxYear = Array.from(years).sort((a, b) => b - a)[0];
-        yFilter.value = maxYear;
-    }
+    if(yFilter.options.length > 1) { yFilter.value = Array.from(years).sort((a, b) => b - a)[0]; }
 }
 
-// คำนวณภาษีอัติโนมัติ (เพิ่มบิล)
-function calculateAddTaxes() {
-    let f1 = Number(document.getElementById('add-fee1').value) || 0; 
-    let f2 = Number(document.getElementById('add-fee2').value) || 0; 
-    let f3 = Number(document.getElementById('add-fee3').value) || 0; 
-    let wh1 = f2 * 0.01; let wh3 = f3 * 0.03;
+function resetFilters() {
+    document.getElementById('flt-year').value = 'all';
+    document.getElementById('flt-month').value = 'all';
+    document.getElementById('flt-day').value = 'all';
+    document.getElementById('flt-user').value = 'all';
+    document.getElementById('flt-status').value = 'all';
+    document.getElementById('flt-customer').value = '';
+    renderManageInvoices();
+}
+
+// ระบบคำนวณภาษีอัติโนมัติ
+function calculateTaxes(prefix) {
+    let f1 = Number(document.getElementById(`${prefix}-fee1`).value) || 0; // ค่าตู้ ไม่หัก
+    let f2 = Number(document.getElementById(`${prefix}-fee2`).value) || 0; // ค่าเที่ยว หัก 1%
+    let f3 = Number(document.getElementById(`${prefix}-fee3`).value) || 0; // ค่าบริการ หัก 3%
+    
+    let wh1 = f2 * 0.01;
+    let wh3 = f3 * 0.03;
     let netPay = (f1 + f2 + f3) - wh1 - wh3;
-    document.getElementById('add-wh1').value = wh1.toFixed(2);
-    document.getElementById('add-wh3').value = wh3.toFixed(2);
-    document.getElementById('add-totalPay').value = netPay.toFixed(2);
+
+    document.getElementById(`${prefix}-wh1`).value = wh1.toFixed(2);
+    document.getElementById(`${prefix}-wh3`).value = wh3.toFixed(2);
+    document.getElementById(`${prefix}-totalPay`).value = netPay.toFixed(2);
 }
-['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id).addEventListener('input', calculateAddTaxes));
-
-// คำนวณภาษีอัติโนมัติ (อัปเดตบิล)
-function calculatePayTaxes() {
-    let f1 = Number(document.getElementById('pay-fee1').value) || 0; 
-    let f2 = Number(document.getElementById('pay-fee2').value) || 0; 
-    let f3 = Number(document.getElementById('pay-fee3').value) || 0; 
-    let wh1 = f2 * 0.01; let wh3 = f3 * 0.03;
-    let netPay = (f1 + f2 + f3) - wh1 - wh3;
-    document.getElementById('pay-wh1').value = wh1.toFixed(2);
-    document.getElementById('pay-wh3').value = wh3.toFixed(2);
-    document.getElementById('pay-totalPay').value = netPay.toFixed(2);
-}
-['pay-fee1', 'pay-fee2', 'pay-fee3'].forEach(id => document.getElementById(id).addEventListener('input', calculatePayTaxes));
+['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('input', () => calculateTaxes('add')); });
+['pay-fee1', 'pay-fee2', 'pay-fee3'].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('input', () => calculateTaxes('pay')); });
 
 
-// 1. Dashboard Render
 function renderDashboard() {
-    const selectedYear = document.getElementById('yearFilter').value;
+    const yFilterEl = document.getElementById('yearFilter');
+    if(!yFilterEl) return;
+    const selectedYear = yFilterEl.value;
     const tbody = document.getElementById('dashboard-body');
     const tfoot = document.getElementById('dashboard-foot');
     if (allInvoiceData.length === 0) return;
@@ -155,15 +157,18 @@ function renderDashboard() {
     tfoot.innerHTML = `<tr><td class="text-center">รวม</td><td class="text-center">${t.count}</td><td>${fmt(t.f1)}</td><td>${fmt(t.f2)}</td><td>${fmt(t.f3)}</td><td>${fmt(t.inc)}</td><td>${fmt(t.w1)}</td><td>${fmt(t.w3)}</td><td>${fmt(t.toPay)}</td><td class="text-green">${fmt(t.paid)}</td><td class="text-red">${fmt(t.bal)}</td></tr>`;
 }
 
-// 2. Manage Invoices Render (ตาราง Master Data ทุกบิล)
+// Master Data
 function renderManageInvoices() {
     const tbody = document.getElementById('manage-body');
-    const fYear = document.getElementById('flt-year').value;
-    const fMonth = document.getElementById('flt-month').value;
-    const fDay = document.getElementById('flt-day').value;
-    const fUser = document.getElementById('flt-user').value;
-    const fCust = document.getElementById('flt-customer').value.toLowerCase();
-    const fStat = document.getElementById('flt-status').value;
+    if(!tbody) return; // ดัก Error กรณี HTML ยังไม่ทันโหลด
+
+    // ดึงค่าอย่างปลอดภัย ป้องกัน Error Null
+    const elYear = document.getElementById('flt-year'); const fYear = elYear ? elYear.value : 'all';
+    const elMonth = document.getElementById('flt-month'); const fMonth = elMonth ? elMonth.value : 'all';
+    const elDay = document.getElementById('flt-day'); const fDay = elDay ? elDay.value : 'all';
+    const elUser = document.getElementById('flt-user'); const fUser = elUser ? elUser.value : 'all';
+    const elCust = document.getElementById('flt-customer'); const fCust = elCust ? elCust.value.toLowerCase() : '';
+    const elStat = document.getElementById('flt-status'); const fStat = elStat ? elStat.value : 'all';
 
     tbody.innerHTML = '';
 
@@ -221,8 +226,6 @@ function renderManageInvoices() {
     });
 }
 
-
-// Modals Handling
 function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
 function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
 
@@ -253,12 +256,10 @@ function openPaymentModal(invNo) {
     document.getElementById('modal-customer').innerText = row["ชื่อลูกค้า"];
     document.getElementById('pay-invNo').value = row["Invoice No."];
     
-    // ดึงข้อมูลเดิมมาโชว์ในช่องเพื่อให้แก้ได้
     document.getElementById('pay-fee1').value = Number(row["ค่าตู้"]) || 0;
     document.getElementById('pay-fee2').value = Number(row["ค่าเที่ยว"]) || 0;
     document.getElementById('pay-fee3').value = Number(row["ค่าบริการ"]) || 0;
     
-    // จัดรูปแบบวันที่สำหรับ input type="date"
     let csD = "", payD = "";
     if(row["วันที่รับยอด CS"]){ let d = new Date(row["วันที่รับยอด CS"]); if(!isNaN(d)) csD = d.toISOString().split('T')[0]; }
     if(row["วันที่ได้รับชำระ"]){ let d = new Date(row["วันที่ได้รับชำระ"]); if(!isNaN(d)) payD = d.toISOString().split('T')[0]; }
@@ -269,7 +270,7 @@ function openPaymentModal(invNo) {
     document.getElementById('pay-status').value = row["สถานะ"] || "ปกติ";
     document.getElementById('pay-cancelReason').value = row["สาเหตุที่ยกเลิก"] || "";
     
-    calculatePayTaxes(); // คำนวณภาษีอิงจากค่าที่ดึงมา
+    calculateTaxes('pay'); 
     toggleModalCancel();
     
     document.getElementById('paymentModal').style.display = 'flex';
@@ -294,7 +295,7 @@ document.getElementById('paymentForm').addEventListener('submit', async function
     try {
         const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
         const result = await response.json();
-        if (result.status === 'success') { msg.classList.add('success'); msg.innerText = result.message; setTimeout(() => { closeModal('paymentModal'); fetchAllData(); showPage('manage'); }, 1000); } 
+        if (result.status === 'success') { msg.classList.add('success'); msg.innerText = result.message; setTimeout(() => { closeModal('paymentModal'); fetchAllData(); }, 1000); } 
         else { msg.classList.add('error'); msg.innerText = result.message; }
     } catch (err) { msg.classList.add('error'); msg.innerText = "Error: " + err.message; } finally { btn.disabled = false; btn.innerText = 'บันทึกข้อมูล'; }
 });
