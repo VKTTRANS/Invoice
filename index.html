@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Transport System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h2>VKT Transport</h2>
+        <div class="nav-links">
+            <button onclick="showPage('dashboard')" id="btn-dashboard" class="active">Dashboard</button>
+            <button onclick="showPage('add-invoice')" id="btn-add">เพิ่ม Invoice</button>
+            <button onclick="showPage('history')" id="btn-history">ประวัติย้อนหลัง</button>
+        </div>
+    </nav>
+
+    <div id="dashboard" class="page-content active-page">
+        <h3>สรุปข้อมูล Invoice ทั้งหมด (Dashboard)</h3>
+        <div class="summary-cards">
+            <div class="card">
+                <h4>จำนวน Invoice ทั้งหมด</h4>
+                <h2 id="dash-count">0</h2>
+            </div>
+            <div class="card">
+                <h4>ยอดชำระรวม (ที่รับเงินแล้ว)</h4>
+                <h2 id="dash-total">0.00</h2>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-invoice" class="page-content">
+        <h3>บันทึก Invoice ใหม่</h3>
+        <form id="invoiceForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Invoice No. *</label>
+                    <input type="text" id="invoiceNo" required>
+                </div>
+                <div class="form-group">
+                    <label>ชื่อลูกค้า *</label>
+                    <input type="text" id="customer" required>
+                </div>
+                <div class="form-group">
+                    <label>วันที่ใช้งาน</label>
+                    <input type="date" id="useDate">
+                </div>
+                <div class="form-group">
+                    <label>ใช้โดย (คนลงข้อมูล) *</label>
+                    <input type="text" id="usedBy" list="usedByList" required placeholder="พิมพ์ชื่อใหม่ หรือเลือกจากรายการ">
+                    <datalist id="usedByList"></datalist>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>รายละเอียด</label>
+                    <input type="text" id="details">
+                </div>
+                
+                <div class="form-group"><label>ค่าตู้</label><input type="number" step="0.01" id="fee1" value="0"></div>
+                <div class="form-group"><label>ค่าเที่ยว</label><input type="number" step="0.01" id="fee2" value="0"></div>
+                <div class="form-group"><label>ค่าบริการ</label><input type="number" step="0.01" id="fee3" value="0"></div>
+                
+                <div class="form-group"><label>วันที่รับยอด CS</label><input type="date" id="csDate"></div>
+                <div class="form-group"><label>วันที่ได้รับชำระ</label><input type="date" id="payDate"></div>
+                
+                <div class="form-group"><label>WH 1%</label><input type="number" step="0.01" id="wh1" value="0"></div>
+                <div class="form-group"><label>WH 3%</label><input type="number" step="0.01" id="wh3" value="0"></div>
+                <div class="form-group"><label>ยอดชำระจริง</label><input type="number" step="0.01" id="totalPay" value="0"></div>
+                
+                <div class="form-group">
+                    <label>สถานะ *</label>
+                    <select id="status" required onchange="toggleCancelReason()">
+                        <option value="ปกติ">ปกติ</option>
+                        <option value="รับชำระแล้ว">รับชำระแล้ว</option>
+                        <option value="ยกเลิก">ยกเลิก</option>
+                    </select>
+                </div>
+                <div class="form-group" id="cancelGroup" style="display: none;">
+                    <label>สาเหตุที่ยกเลิก</label>
+                    <input type="text" id="cancelReason">
+                </div>
+                <div class="form-group">
+                    <label>ผู้บันทึกการรับยอด</label>
+                    <input type="text" id="checker" list="checkerList" placeholder="พิมพ์ชื่อใหม่ หรือเลือกจากรายการ">
+                    <datalist id="checkerList"></datalist>
+                </div>
+            </div>
+            <button type="submit" class="submit-btn" id="submitBtn">บันทึกข้อมูล</button>
+            <div id="message" class="msg"></div>
+        </form>
+    </div>
+
+    <div id="history" class="page-content">
+        <h3>ประวัติ Invoice ล่าสุด</h3>
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Invoice No.</th>
+                        <th>ลูกค้า</th>
+                        <th>วันที่ใช้งาน</th>
+                        <th>ยอดชำระ</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <tr><td colspan="5" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
