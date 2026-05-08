@@ -511,17 +511,15 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     finally { btn.disabled = false; btn.innerText = '💾 บันทึกแก้ไข'; }
 });
 
+// 🚀 แก้ไขฟังก์ชันดึงข้อมูลจากระบบเก่าเป็น GET Request เพื่อแก้ปัญหา Failed to Fetch
 async function syncOldData() {
     const btn = document.getElementById('btn-sync');
     btn.disabled = true;
     btn.innerText = '⏳ กำลังดึงข้อมูล...';
 
     try {
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'syncOldData' }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        });
+        // ใช้ GET request ผ่าน query parameter แก้ปัญหา CORS ที่เจอตอนทำ POST
+        const res = await fetch(`${SCRIPT_URL}?action=syncOldData`);
         const data = await res.json();
         
         if (data.status === 'success') {
