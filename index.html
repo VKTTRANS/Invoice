@@ -129,15 +129,15 @@
                     <div class="form-section">
                         <h4 class="section-title">💰 ค่าใช้จ่าย</h4>
                         <div class="form-grid-3">
-                            <div class="form-group"><label>ค่าตู้</label><input type="number" step="0.01" id="add-fee1" value="0"></div>
-                            <div class="form-group"><label>ค่าเที่ยว</label><input type="number" step="0.01" id="add-fee2" value="0"></div>
-                            <div class="form-group"><label>ค่าบริการ</label><input type="number" step="0.01" id="add-fee3" value="0"></div>
+                            <div class="form-group"><label>ค่าตู้</label><input type="text" inputmode="decimal" id="add-fee1" value="0.00"></div>
+                            <div class="form-group"><label>ค่าเที่ยว</label><input type="text" inputmode="decimal" id="add-fee2" value="0.00"></div>
+                            <div class="form-group"><label>ค่าบริการ</label><input type="text" inputmode="decimal" id="add-fee3" value="0.00"></div>
                         </div>
                         <div class="form-grid-4" style="margin-top: 0.8rem;">
-                            <div class="form-group"><label>ยอดรวม (ก่อนหัก)</label><input type="number" step="0.01" id="add-subTotal" value="0" readonly style="background:#f1f5f9; font-weight:bold;"></div>
-                            <div class="form-group"><label>WH 1%</label><input type="number" step="0.01" id="add-wh1" value="0"></div>
-                            <div class="form-group"><label>WH 3%</label><input type="number" step="0.01" id="add-wh3" value="0"></div>
-                            <div class="form-group"><label>ยอดวางบิล (สุทธิ)</label><input type="number" step="0.01" id="add-totalPay" value="0" readonly style="background:#e2e8f0; font-weight:bold; color:#0f172a;"></div>
+                            <div class="form-group"><label>ยอดรวม (ก่อนหัก)</label><input type="text" id="add-subTotal" value="0.00" readonly style="background:#f1f5f9; font-weight:bold;"></div>
+                            <div class="form-group"><label>WH 1%</label><input type="text" inputmode="decimal" id="add-wh1" value="0.00"></div>
+                            <div class="form-group"><label>WH 3%</label><input type="text" inputmode="decimal" id="add-wh3" value="0.00"></div>
+                            <div class="form-group"><label>ยอดวางบิล (สุทธิ)</label><input type="text" id="add-totalPay" value="0.00" readonly style="background:#e2e8f0; font-weight:bold; color:#0f172a;"></div>
                         </div>
                     </div>
 
@@ -145,8 +145,8 @@
                         <h4 class="section-title text-green">✅ การรับชำระเงิน (ส่วนคนเช็คยอด)</h4>
                         <div class="form-grid-4">
                             <div class="form-group"><label>วันที่ได้รับชำระ</label><input type="date" id="add-payDate"></div>
-                            <div class="form-group"><label class="text-green">ยอดรับชำระจริง</label><input type="number" step="0.01" id="add-actualPay" value="0" style="border-color:#10b981;"></div>
-                            <div class="form-group"><label>ผลต่าง (รับจริง - วางบิล)</label><input type="number" step="0.01" id="add-diffPay" value="0" readonly style="background:#f1f5f9; font-weight:bold;"></div>
+                            <div class="form-group"><label class="text-green">ยอดรับชำระจริง</label><input type="text" inputmode="decimal" id="add-actualPay" value="0.00" style="border-color:#10b981;"></div>
+                            <div class="form-group"><label>ผลต่าง (รับจริง - วางบิล)</label><input type="text" id="add-diffPay" value="0.00" readonly style="background:#f1f5f9; font-weight:bold;"></div>
                             <div class="form-group">
                                 <label>สถานะ *</label>
                                 <select id="add-status" required>
@@ -193,15 +193,15 @@
                     <div class="form-section">
                         <h4 class="section-title">💰 ค่าใช้จ่าย</h4>
                         <div class="form-grid-3">
-                            <div class="form-group"><label>ค่าตู้</label><input type="number" step="0.01" id="det-fee1"></div>
-                            <div class="form-group"><label>ค่าเที่ยว</label><input type="number" step="0.01" id="det-fee2"></div>
-                            <div class="form-group"><label>ค่าบริการ</label><input type="number" step="0.01" id="det-fee3"></div>
+                            <div class="form-group"><label>ค่าตู้</label><input type="text" inputmode="decimal" id="det-fee1" value="0.00"></div>
+                            <div class="form-group"><label>ค่าเที่ยว</label><input type="text" inputmode="decimal" id="det-fee2" value="0.00"></div>
+                            <div class="form-group"><label>ค่าบริการ</label><input type="text" inputmode="decimal" id="det-fee3" value="0.00"></div>
                         </div>
                         <div class="form-grid-4" style="margin-top: 0.8rem;">
-                            <div class="form-group"><label>ยอดรวม (ก่อนหัก)</label><input type="number" step="0.01" id="det-subTotal" readonly style="background:#f1f5f9; font-weight:bold;"></div>
-                            <div class="form-group"><label>WH 1%</label><input type="number" step="0.01" id="det-wh1"></div>
-                            <div class="form-group"><label>WH 3%</label><input type="number" step="0.01" id="det-wh3"></div>
-                            <div class="form-group"><label>ยอดวางบิล (สุทธิ)</label><input type="number" step="0.01" id="det-totalPay" required style="background:#e2e8f0; font-weight:bold; color:#0f172a;" readonly></div>
+                            <div class="form-group"><label>ยอดรวม (ก่อนหัก)</label><input type="text" id="det-subTotal" value="0.00" readonly style="background:#f1f5f9; font-weight:bold;"></div>
+                            <div class="form-group"><label>WH 1%</label><input type="text" inputmode="decimal" id="det-wh1" value="0.00"></div>
+                            <div class="form-group"><label>WH 3%</label><input type="text" inputmode="decimal" id="det-wh3" value="0.00"></div>
+                            <div class="form-group"><label>ยอดวางบิล (สุทธิ)</label><input type="text" id="det-totalPay" value="0.00" required style="background:#e2e8f0; font-weight:bold; color:#0f172a;" readonly></div>
                         </div>
                     </div>
 
@@ -210,8 +210,8 @@
                         <div class="form-grid-4">
                             <div class="form-group"><label>วันที่ได้รับชำระ</label><input type="date" id="det-payDate"></div>
                             <div class="form-group"><label>ผู้บันทึกการรับยอด</label><input type="text" id="det-checker" list="checkerList" autocomplete="off" placeholder="ชื่อคนเช็คยอด"></div>
-                            <div class="form-group"><label class="text-green">ยอดรับชำระจริง</label><input type="number" step="0.01" id="det-actualPay" style="border-color:#10b981;"></div>
-                            <div class="form-group"><label>ผลต่าง (รับจริง - วางบิล)</label><input type="number" step="0.01" id="det-diffPay" readonly style="background:#f1f5f9; font-weight:bold;"></div>
+                            <div class="form-group"><label class="text-green">ยอดรับชำระจริง</label><input type="text" inputmode="decimal" id="det-actualPay" value="0.00" style="border-color:#10b981;"></div>
+                            <div class="form-group"><label>ผลต่าง (รับจริง - วางบิล)</label><input type="text" id="det-diffPay" value="0.00" readonly style="background:#f1f5f9; font-weight:bold;"></div>
                         </div>
                         <div class="form-grid-2" style="margin-top: 0.8rem;">
                             <div class="form-group">
