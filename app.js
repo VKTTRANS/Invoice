@@ -6,6 +6,39 @@ let sortCol = 'Invoice No.';
 let sortAsc = true; 
 let currentPage = 1;
 
+// จัดการ Event listener ทั้งหมดเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ ป้องกันการกดแล้วไม่คำนวณ
+window.onload = async function() {
+    setupEventListeners();
+    await fetchDropdowns();
+    await fetchAllData();
+};
+
+function setupEventListeners() {
+    // ผูกคำสั่งคำนวณเมื่อมีการพิมพ์ตัวเลขเข้าไป
+    ['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'fee')));
+    ['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'fee')));
+
+    ['add-wh1', 'add-wh3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'wh')));
+    ['det-wh1', 'det-wh3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'wh')));
+
+    document.getElementById('add-actualPay')?.addEventListener('input', () => calculateDiff('add'));
+    document.getElementById('det-actualPay')?.addEventListener('input', () => calculateDiff('det'));
+
+    document.getElementById('det-payDate')?.addEventListener('change', function() {
+        const statusField = document.getElementById('det-status');
+        if (this.value !== "" && statusField.value === "ปกติ") {
+            statusField.value = "รับชำระแล้ว";
+        }
+        toggleDetCancel();
+    });
+    document.getElementById('add-payDate')?.addEventListener('change', function() {
+        const statusField = document.getElementById('add-status');
+        if (this.value !== "" && statusField.value === "ปกติ") {
+            statusField.value = "รับชำระแล้ว";
+        }
+    });
+}
+
 function showPage(pageId) {
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active-page'));
     document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
@@ -27,11 +60,6 @@ function setInitialFilter() {
         fltY.value = now.getFullYear().toString();
     }
 }
-
-window.onload = async function() {
-    await fetchDropdowns();
-    await fetchAllData();
-};
 
 async function fetchDropdowns() {
     try {
@@ -114,13 +142,16 @@ function resetFilters() {
     resetPageAndRender();
 }
 
-// source = 'fee' (เปลี่ยนค่าใช้จ่าย ระบบช่วยคำนวณ WH ออโต้)
-// source = 'wh' หรือ 'init' (ดึงค่าจาก DB หรือพิมพ์แก้เอง ไม่ต้องคำนวณ WH ทับ)
 function calculateTaxes(prefix, source = 'fee') {
     let f1 = Number(document.getElementById(`${prefix}-fee1`).value) || 0; 
     let f2 = Number(document.getElementById(`${prefix}-fee2`).value) || 0; 
     let f3 = Number(document.getElementById(`${prefix}-fee3`).value) || 0; 
     
+    // ยอดรวมทั้งหมดก่อนหัก WH
+    let subTotal = f1 + f2 + f3;
+    let subTotalInput = document.getElementById(`${prefix}-subTotal`);
+    if(subTotalInput) subTotalInput.value = subTotal.toFixed(2);
+
     let wh1Input = document.getElementById(`${prefix}-wh1`);
     let wh3Input = document.getElementById(`${prefix}-wh3`);
 
@@ -132,7 +163,8 @@ function calculateTaxes(prefix, source = 'fee') {
     let wh1 = Number(wh1Input.value) || 0;
     let wh3 = Number(wh3Input.value) || 0;
     
-    let expectedPay = (f1 + f2 + f3) - wh1 - wh3;
+    // ยอดวางบิลสุทธิ (หลังหัก WH แล้ว)
+    let expectedPay = subTotal - wh1 - wh3;
     
     document.getElementById(`${prefix}-totalPay`).value = expectedPay.toFixed(2);
     
@@ -152,30 +184,6 @@ function calculateDiff(prefix) {
     else diffInput.style.color = '#0f172a';
 }
 
-// Listener เมื่อแก้ตัวเลข
-['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'fee')));
-['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'fee')));
-
-['add-wh1', 'add-wh3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'wh')));
-['det-wh1', 'det-wh3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'wh')));
-
-document.getElementById('add-actualPay')?.addEventListener('input', () => calculateDiff('add'));
-document.getElementById('det-actualPay')?.addEventListener('input', () => calculateDiff('det'));
-
-
-document.getElementById('det-payDate')?.addEventListener('change', function() {
-    const statusField = document.getElementById('det-status');
-    if (this.value !== "" && statusField.value === "ปกติ") {
-        statusField.value = "รับชำระแล้ว";
-    }
-    toggleDetCancel();
-});
-document.getElementById('add-payDate')?.addEventListener('change', function() {
-    const statusField = document.getElementById('add-status');
-    if (this.value !== "" && statusField.value === "ปกติ") {
-        statusField.value = "รับชำระแล้ว";
-    }
-});
 
 function renderDashboard() {
     const selectedYear = document.getElementById('yearFilter').value;
