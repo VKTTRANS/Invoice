@@ -113,15 +113,38 @@ function calculateTaxes(prefix) {
     let f2 = Number(document.getElementById(`${prefix}-fee2`).value) || 0; 
     let f3 = Number(document.getElementById(`${prefix}-fee3`).value) || 0; 
     let wh1 = f2 * 0.01; let wh3 = f3 * 0.03;
-    let netPay = (f1 + f2 + f3) - wh1 - wh3;
+    let expectedPay = (f1 + f2 + f3) - wh1 - wh3;
+    
     document.getElementById(`${prefix}-wh1`).value = wh1.toFixed(2);
     document.getElementById(`${prefix}-wh3`).value = wh3.toFixed(2);
-    document.getElementById(`${prefix}-totalPay`).value = netPay.toFixed(2);
+    document.getElementById(`${prefix}-totalPay`).value = expectedPay.toFixed(2);
+    
+    // คำนวณผลต่าง
+    calculateDiff(prefix);
 }
+
+function calculateDiff(prefix) {
+    let expectedPay = Number(document.getElementById(`${prefix}-totalPay`).value) || 0;
+    let actualPay = Number(document.getElementById(`${prefix}-actualPay`).value) || 0;
+    let diff = actualPay - expectedPay;
+    
+    let diffInput = document.getElementById(`${prefix}-diffPay`);
+    diffInput.value = diff.toFixed(2);
+    
+    // ให้สีแดงถ้าติดลบ ให้สีเขียวถ้าเป็นบวก
+    if(diff < 0) diffInput.style.color = '#ef4444';
+    else if(diff > 0) diffInput.style.color = '#10b981';
+    else diffInput.style.color = '#0f172a';
+}
+
 ['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add')));
 ['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det')));
 
-// ฟีเจอร์ใหม่: ถ้าใส่วันที่รับชำระ ให้ปรับสถานะเป็นรับชำระแล้วอัตโนมัติ
+// Event listener เมื่อพิมพ์ยอดรับจริง ให้คำนวณผลต่างทันที
+document.getElementById('add-actualPay')?.addEventListener('input', () => calculateDiff('add'));
+document.getElementById('det-actualPay')?.addEventListener('input', () => calculateDiff('det'));
+
+
 document.getElementById('det-payDate')?.addEventListener('change', function() {
     const statusField = document.getElementById('det-status');
     if (this.value !== "" && statusField.value === "ปกติ") {
@@ -154,10 +177,14 @@ function renderDashboard() {
                 let f1 = Number(row["ค่าตู้"]) || 0; let f2 = Number(row["ค่าเที่ยว"]) || 0; let f3 = Number(row["ค่าบริการ"]) || 0;
                 let inc = f1 + f2 + f3;
                 let w1 = Number(row["WH1%"]) || 0; let w3 = Number(row["WH3%"]) || 0;
-                let toPay = inc - w1 - w3;
+                let toPay = inc - w1 - w3; // ยอดวางบิล
                 let isPaid = (row["สถานะ"] === "รับชำระแล้ว" || (row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== ""));
-                let paid = isPaid ? (Number(row["ยอดชำระ"]) || 0) : 0;
+                
+                // ใช้คอลัมน์ "ยอดรับชำระจริง" ถ่าไม่มีให้ใช้ "ยอดชำระ" แบบเดิมไปก่อน
+                let actualVal = row["ยอดรับชำระจริง"] !== undefined && row["ยอดรับชำระจริง"] !== "" ? Number(row["ยอดรับชำระจริง"]) : Number(row["ยอดชำระ"]);
+                let paid = isPaid ? (actualVal || 0) : 0;
                 let bal = toPay - paid;
+                
                 mData[m].count++; mData[m].f1 += f1; mData[m].f2 += f2; mData[m].f3 += f3; mData[m].inc += inc; mData[m].w1 += w1; mData[m].w3 += w3; mData[m].toPay += toPay; mData[m].paid += paid; mData[m].bal += bal;
                 t.count++; t.f1 += f1; t.f2 += f2; t.f3 += f3; t.inc += inc; t.w1 += w1; t.w3 += w3; t.toPay += toPay; t.paid += paid; t.bal += bal;
             }
@@ -167,11 +194,11 @@ function renderDashboard() {
     tbody.innerHTML = '';
     mData.forEach(m => {
         let z = m.count === 0; let bc = z ? 'text-gray' : (m.bal > 0.01 ? 'text-red' : '');
-        tbody.innerHTML += `<tr class="${z ? 'text-gray' : ''}"><td class="text-center">${m.month}</td><td class="text-center">${m.count}</td>
+        tbody.innerHTML += `<tr class="${z ? 'text-gray' : ''}"><td class="text-center col-date">${m.month}</td><td class="text-center col-no">${m.count}</td>
             <td>${fmt(m.f1)}</td><td>${fmt(m.f2)}</td><td>${fmt(m.f3)}</td><td>${fmt(m.inc)}</td><td>${fmt(m.w1)}</td><td>${fmt(m.w3)}</td><td>${fmt(m.toPay)}</td>
-            <td class="${z ? '' : 'text-green'}">${z ? '' : fmt(m.paid)}</td><td class="${bc}">${z ? '' : fmt(m.bal)}</td></tr>`;
+            <td class="${z ? '' : 'text-green font-bold'}">${z ? '' : fmt(m.paid)}</td><td class="${bc}">${z ? '' : fmt(m.bal)}</td></tr>`;
     });
-    tfoot.innerHTML = `<tr><td class="text-center">รวม</td><td class="text-center">${t.count}</td><td>${fmt(t.f1)}</td><td>${fmt(t.f2)}</td><td>${fmt(t.f3)}</td><td>${fmt(t.inc)}</td><td>${fmt(t.w1)}</td><td>${fmt(t.w3)}</td><td>${fmt(t.toPay)}</td><td class="text-green">${fmt(t.paid)}</td><td class="text-red">${fmt(t.bal)}</td></tr>`;
+    tfoot.innerHTML = `<tr><td class="text-center">รวม</td><td class="text-center">${t.count}</td><td>${fmt(t.f1)}</td><td>${fmt(t.f2)}</td><td>${fmt(t.f3)}</td><td>${fmt(t.inc)}</td><td>${fmt(t.w1)}</td><td>${fmt(t.w3)}</td><td>${fmt(t.toPay)}</td><td class="text-green font-bold">${fmt(t.paid)}</td><td class="text-red">${fmt(t.bal)}</td></tr>`;
 }
 
 function sortTable(col) {
@@ -264,23 +291,30 @@ function renderManageInvoices() {
         let dcs = row["วันที่รับยอด CS"] ? new Date(row["วันที่รับยอด CS"]).toLocaleDateString('th-TH') : '';
         let dp = row["วันที่ได้รับชำระ"] ? new Date(row["วันที่ได้รับชำระ"]).toLocaleDateString('th-TH') : '';
         let ds = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
-        let sc = ds === 'ยกเลิก' ? 'text-red' : (ds === 'รับชำระแล้ว' ? 'text-green' : '');
+        
+        // จัดการสีสถานะที่หายไป
+        let sc = '';
+        if (ds === 'ยกเลิก') sc = 'text-red font-bold';
+        else if (ds === 'รับชำระแล้ว') sc = 'text-green font-bold';
+        else sc = 'text-orange font-bold'; // สีส้มสำหรับ ปกติ(ยังไม่จ่าย)
+
+        // ตรวจสอบว่าคอลัมน์ใหม่มาหรือยัง ถ้ายังให้ใช้ของเดิมไปก่อน
+        let actualPay = row["ยอดรับชำระจริง"] !== undefined && row["ยอดรับชำระจริง"] !== "" ? row["ยอดรับชำระจริง"] : row["ยอดชำระ"];
 
         tbody.innerHTML += `<tr class="clickable-row" onclick="openDetailModal('${row["Invoice No."]}')">
-            <td class="text-center">${row["No."]}</td>
-            <td class="text-left" style="color:#2563eb; font-weight:bold;">${row["Invoice No."]}</td>
-            <td class="text-left">${row["ชื่อลูกค้า"]}</td>
-            <td class="text-center">${du}</td>
+            <td class="col-no">${row["No."]}</td>
+            <td class="col-inv" style="color:#2563eb; font-weight:bold;">${row["Invoice No."]}</td>
+            <td class="col-text">${row["ชื่อลูกค้า"]}</td>
+            <td class="col-date">${du}</td>
+            <td class="col-date">${dcs}</td>
             <td class="text-center">${row["ใช้โดย"]}</td>
             <td class="detail-col">${row["รายละเอียด"] || ''}</td>
             <td>${fmt(row["ค่าตู้"])}</td>
             <td>${fmt(row["ค่าเที่ยว"])}</td>
             <td>${fmt(row["ค่าบริการ"])}</td>
-            <td class="text-center">${dcs}</td>
-            <td class="text-center">${dp}</td>
-            <td>${fmt(row["WH1%"])}</td>
-            <td>${fmt(row["WH3%"])}</td>
-            <td style="font-weight:bold;">${fmt(row["ยอดชำระ"])}</td>
+            <td class="col-date">${dp}</td>
+            <td style="color:#64748b;">${fmt(row["ยอดชำระ"])}</td>
+            <td style="font-weight:bold;">${fmt(actualPay)}</td>
             <td class="text-center"><span class="${sc}">${ds}</span></td>
         </tr>`;
     });
@@ -298,7 +332,10 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
         useDate: document.getElementById('add-useDate').value, usedBy: document.getElementById('add-usedBy').value, details: document.getElementById('add-details').value,
         fee1: document.getElementById('add-fee1').value, fee2: document.getElementById('add-fee2').value, fee3: document.getElementById('add-fee3').value,
         csDate: document.getElementById('add-csDate').value, payDate: document.getElementById('add-payDate').value,
-        wh1: document.getElementById('add-wh1').value, wh3: document.getElementById('add-wh3').value, totalPay: document.getElementById('add-totalPay').value,
+        wh1: document.getElementById('add-wh1').value, wh3: document.getElementById('add-wh3').value, 
+        totalPay: document.getElementById('add-totalPay').value,
+        actualPay: document.getElementById('add-actualPay').value,
+        diffPay: document.getElementById('add-diffPay').value,
         status: document.getElementById('add-status').value
     };
     try {
@@ -329,9 +366,15 @@ function openDetailModal(invNo) {
     document.getElementById('det-csDate').value = sd(row["วันที่รับยอด CS"]);
     document.getElementById('det-payDate').value = sd(row["วันที่ได้รับชำระ"]);
     document.getElementById('det-checker').value = row["ผู้บันทึกการรับยอด"] || "";
+    
+    // ตั้งค่าตัวแปรใหม่สำหรับหน้า Edit
+    document.getElementById('det-actualPay').value = row["ยอดรับชำระจริง"] !== undefined && row["ยอดรับชำระจริง"] !== "" ? row["ยอดรับชำระจริง"] : row["ยอดชำระ"];
+
     document.getElementById('det-status').value = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
     document.getElementById('det-cancelReason').value = row["สาเหตุที่ยกเลิก"] || "";
-    calculateTaxes('det'); toggleDetCancel();
+    
+    calculateTaxes('det'); 
+    toggleDetCancel();
     document.getElementById('detailModal').style.display = 'flex';
 }
 
@@ -364,7 +407,10 @@ document.getElementById('detailForm').addEventListener('submit', async function(
         useDate: document.getElementById('det-useDate').value, usedBy: document.getElementById('det-usedBy').value, details: document.getElementById('det-details').value,
         fee1: document.getElementById('det-fee1').value, fee2: document.getElementById('det-fee2').value, fee3: document.getElementById('det-fee3').value,
         csDate: document.getElementById('det-csDate').value, payDate: document.getElementById('det-payDate').value,
-        wh1: document.getElementById('det-wh1').value, wh3: document.getElementById('det-wh3').value, totalPay: document.getElementById('det-totalPay').value,
+        wh1: document.getElementById('det-wh1').value, wh3: document.getElementById('det-wh3').value, 
+        totalPay: document.getElementById('det-totalPay').value,
+        actualPay: document.getElementById('det-actualPay').value,
+        diffPay: document.getElementById('det-diffPay').value,
         checker: document.getElementById('det-checker').value, status: document.getElementById('det-status').value, cancelReason: document.getElementById('det-cancelReason').value
     };
     try {
