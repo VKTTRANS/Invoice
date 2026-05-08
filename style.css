@@ -1,18 +1,26 @@
 * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-body { margin: 0; background-color: #f0f2f5; color: #333; }
-.navbar { background-color: #1a252f; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+body { margin: 0; background-color: #f4f6f9; color: #333; }
+.navbar { background-color: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
 .navbar h2 { margin: 0; font-size: 20px;}
-.nav-links button { background: none; border: none; color: #ccc; font-size: 16px; margin-left: 10px; cursor: pointer; padding: 8px 12px; transition: 0.3s;}
+.nav-links button { background: none; border: none; color: #bdc3c7; font-size: 16px; margin-left: 10px; cursor: pointer; padding: 8px 12px; transition: 0.3s;}
 .nav-links button.active, .nav-links button:hover { color: white; border-bottom: 2px solid #3498db; }
-.page-content { display: none; padding: 20px; max-width: 1100px; margin: 20px auto; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+.page-content { display: none; padding: 25px; max-width: 1200px; margin: 20px auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
 .active-page { display: block; animation: fadeIn 0.4s; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+/* Filter Section */
+.dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+.dashboard-header h3 { margin: 0; color: #2c3e50; font-size: 22px;}
+.filter-group { display: flex; align-items: center; font-weight: bold;}
+.filter-group select { margin-left: 10px; padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; outline: none; cursor: pointer;}
+
+/* Form */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
 .full-width { grid-column: 1 / -1; }
-.form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-.form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: #3498db; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #34495e;}
+.form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fdfdfd;}
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 5px rgba(52,152,219,0.3);}
 
 .submit-btn { background-color: #27ae60; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 20px; width: 100%; font-weight: bold;}
 .submit-btn:hover { background-color: #219653; }
@@ -22,8 +30,14 @@ body { margin: 0; background-color: #f0f2f5; color: #333; }
 .msg.success { background-color: #e8f8f5; color: #27ae60; border: 1px solid #27ae60; display: block;}
 .msg.error { background-color: #fdedec; color: #e74c3c; border: 1px solid #e74c3c; display: block;}
 
-.data-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-.data-table th, .data-table td { padding: 10px; border: 1px solid #ddd; }
-.data-table th { background-color: #2c3e50; color: white; }
-.data-table tr:nth-child(even){background-color: #f9f9f9;}
-.data-table tfoot td { border-top: 2px solid #bdc3c7; }
+/* Table Styling (Excel Like) */
+.data-table { width: 100%; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
+.data-table th, .data-table td { padding: 12px 10px; border: 1px solid #e0e0e0; text-align: right; }
+.data-table th { color: white; font-weight: bold; }
+.data-table tr:nth-child(even){background-color: #fcfcfc;}
+.data-table tr:hover {background-color: #f1f8ff;}
+
+/* Custom Dashboard Table Colors */
+.bg-orange { background-color: #e67e22 !important; border-color: #d35400 !important; }
+.bg-green { background-color: #2ecc71 !important; border-color: #27ae60 !important; }
+#dashboard-foot td { font-weight: bold; background-color: #f4f6f9; border-top: 2px solid #bdc3c7; border-bottom: 2px solid #bdc3c7; }
