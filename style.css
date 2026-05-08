@@ -18,7 +18,7 @@ body { background-color: #f3f4f6; color: #1f2937; overflow-x: hidden; }
 .filter-item label { font-size: 10px; color: #64748b; margin-bottom: 3px; font-weight: 600; text-transform: uppercase;}
 .filter-item select, .filter-item input { padding: 5px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; background: #ffffff; }
 
-/* Form Grouping & Structure */
+/* Form Structure */
 .form-section { background: #ffffff; padding: 12px 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
 .section-title { font-size: 0.9rem; color: #0f172a; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; display: flex; align-items: center; gap: 5px;}
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; }
@@ -29,7 +29,7 @@ body { background-color: #f3f4f6; color: #1f2937; overflow-x: hidden; }
 
 .form-group label { display: block; margin-bottom: 0.2rem; font-size: 0.75rem; font-weight: 600; color: #4b5563; }
 .form-group input, .form-group select { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 0.3rem; font-size: 0.85rem; transition: border-color 0.2s;}
-.form-group input:focus, .form-group select:focus { border-color: #2563eb; }
+.form-group input:focus, .form-group select:focus { border-color: #2563eb; outline: none; }
 
 .btn-confirm { background-color: #2563eb; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 0.3rem; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
 .btn-cancel { background: #e2e8f0; color: #475569; border: none; padding: 0.4rem 0.8rem; border-radius: 0.3rem; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
@@ -40,11 +40,11 @@ body { background-color: #f3f4f6; color: #1f2937; overflow-x: hidden; }
 .data-table th { padding: 8px 6px; text-align: center !important; border: 1px solid #e2e8f0; }
 .data-table td { padding: 6px 8px; text-align: right; border: 1px solid #e2e8f0; }
 
-/* ปรับขนาดคอลัมน์ให้สมส่วน และจัดการตัดคำยาวๆ */
+/* คอลัมน์ชื่อลูกค้า ตัดคำยาวๆ */
 .col-no { width: 30px; text-align: center !important;}
 .col-inv { width: 80px; text-align: center !important;}
 .col-text { 
-    max-width: 150px; 
+    max-width: 160px; 
     white-space: nowrap; 
     overflow: hidden; 
     text-overflow: ellipsis; 
@@ -70,7 +70,6 @@ body { background-color: #f3f4f6; color: #1f2937; overflow-x: hidden; }
 .text-gray { color: #9ca3af; }
 .font-bold { font-weight: bold; }
 
-.pagination-container { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 10px; font-size: 0.8rem; }
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 2rem; overflow-y: auto;}
 .modal-content { background: #f8fafc; width: 96%; border-radius: 8px; animation: scaleIn 0.2s; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin-bottom: 2rem;}
 @keyframes scaleIn { from { transform: scale(0.98); opacity: 0;} to { transform: scale(1); opacity: 1;} }
@@ -78,7 +77,4 @@ body { background-color: #f3f4f6; color: #1f2937; overflow-x: hidden; }
 .modal-body { padding: 15px; }
 .modal-footer { padding: 12px 15px; border-top: 1px solid #e2e8f0; display: flex; background: #ffffff; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10;}
 .close-btn { font-size: 1.5rem; cursor: pointer; color: #64748b; line-height: 1; }
-.close-btn:hover { color: #ef4444; }
 .msg { font-size: 0.85rem; margin-top: 10px; font-weight: 600; text-align: center; }
-.msg.success { color: #10b981; }
-.msg.error { color: #ef4444; }
