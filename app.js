@@ -6,15 +6,13 @@ let sortCol = 'Invoice No.';
 let sortAsc = true; 
 let currentPage = 1;
 
-// จัดการ Event listener ทั้งหมดเมื่อหน้าเว็บโหลดเสร็จสมบูรณ์ ป้องกันการกดแล้วไม่คำนวณ
+// จัดการ Event listener และดึงข้อมูลรวดเดียว
 window.onload = async function() {
     setupEventListeners();
-    await fetchDropdowns();
-    await fetchAllData();
+    await fetchInitialData(); // ดึงข้อมูลแบบ 2 in 1 เพื่อความรวดเร็ว
 };
 
 function setupEventListeners() {
-    // ผูกคำสั่งคำนวณเมื่อมีการพิมพ์ตัวเลขเข้าไป
     ['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'fee')));
     ['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'fee')));
 
@@ -61,11 +59,13 @@ function setInitialFilter() {
     }
 }
 
-async function fetchDropdowns() {
+// 🚀 ฟังก์ชันใหม่: ดึง Dropdown และ Invoice มาพร้อมกันในครั้งเดียว (โหลดไวขึ้น 2 เท่า)
+async function fetchInitialData() {
     try {
-        const res = await fetch(`${SCRIPT_URL}?action=getDropdowns`);
+        const res = await fetch(`${SCRIPT_URL}?action=getInitialData`);
         const data = await res.json();
         
+        // เซ็ตค่า Dropdown
         const uList = document.getElementById('usedByList');
         if(data.users && uList) { uList.innerHTML = ''; data.users.forEach(n => uList.innerHTML += `<option value="${n}">`); }
         
@@ -75,20 +75,14 @@ async function fetchDropdowns() {
         const custList = document.getElementById('customerList');
         if(data.customers && custList) { custList.innerHTML = ''; data.customers.forEach(n => custList.innerHTML += `<option value="${n}">`); }
         
-    } catch(e) { console.error(e); }
-}
-
-async function fetchAllData() {
-    try {
-        const res = await fetch(`${SCRIPT_URL}?action=getData`);
-        allInvoiceData = await res.json();
+        // เซ็ตค่าตาราง Invoice
+        allInvoiceData = data.invoices || [];
         setupFilters();
         renderDashboard();
         setInitialFilter();
         renderManageInvoices();
-    } catch (error) {
-        console.error(error);
-    }
+        
+    } catch(e) { console.error("Error fetching data:", e); }
 }
 
 function setupFilters() {
@@ -142,12 +136,13 @@ function resetFilters() {
     resetPageAndRender();
 }
 
+// 🛠️ คำนวณภาษี และย้ำการแสดงผล "ยอดรวมก่อนหัก"
 function calculateTaxes(prefix, source = 'fee') {
     let f1 = Number(document.getElementById(`${prefix}-fee1`).value) || 0; 
     let f2 = Number(document.getElementById(`${prefix}-fee2`).value) || 0; 
     let f3 = Number(document.getElementById(`${prefix}-fee3`).value) || 0; 
     
-    // ยอดรวมทั้งหมดก่อนหัก WH
+    // คำนวณยอดรวมก่อนหัก
     let subTotal = f1 + f2 + f3;
     let subTotalInput = document.getElementById(`${prefix}-subTotal`);
     if(subTotalInput) subTotalInput.value = subTotal.toFixed(2);
@@ -387,7 +382,7 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
         if (data.status === 'success') { 
             msg.classList.add('success'); msg.innerText = data.message; 
             document.getElementById('invoiceForm').reset(); 
-            setTimeout(() => { closeModal('addModal'); fetchAllData(); msg.innerText='';}, 1000); 
+            setTimeout(() => { closeModal('addModal'); fetchInitialData(); msg.innerText='';}, 1000); 
         } else { msg.classList.add('error'); msg.innerText = data.message; }
     } catch (err) { msg.classList.add('error'); msg.innerText = err.message; } 
     finally { btn.disabled = false; btn.innerText = '💾 สร้างบิลใหม่'; }
@@ -405,7 +400,7 @@ function openDetailModal(invNo) {
     document.getElementById('det-fee2').value = Number(row["ค่าเที่ยว"]) || 0;
     document.getElementById('det-fee3').value = Number(row["ค่าบริการ"]) || 0;
     
-    // ดึงค่า WH เดิมที่บันทึกไว้มาแสดง (ไม่ทับด้วยค่าคำนวณใหม่)
+    // ดึงค่า WH เดิมที่บันทึกไว้มาแสดง
     document.getElementById('det-wh1').value = Number(row["WH1%"]) || 0;
     document.getElementById('det-wh3').value = Number(row["WH3%"]) || 0;
     
@@ -420,7 +415,7 @@ function openDetailModal(invNo) {
     document.getElementById('det-status').value = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
     document.getElementById('det-cancelReason').value = row["สาเหตุที่ยกเลิก"] || "";
     
-    // โหลดค่าเสร็จแล้ว คำนวณยอดรวมโดย 'init' แปลว่าไม่ต้องคำนวณ WH ทับ
+    // โหลดค่าเสร็จแล้ว คำนวณยอดรวมใหม่ เพื่อแสดงผล
     calculateTaxes('det', 'init'); 
     toggleDetCancel();
     document.getElementById('detailModal').style.display = 'flex';
@@ -440,7 +435,7 @@ async function deleteInvoice() {
     try {
         const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({action: 'delete', invoiceNo: invNo}), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
         const data = await res.json();
-        if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchAllData(); msg.innerText='';}, 1000); } 
+        if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchInitialData(); msg.innerText='';}, 1000); } 
         else { msg.classList.add('error'); msg.innerText = data.message; btn.disabled = false;}
     } catch (err) { msg.classList.add('error'); msg.innerText = err.message; btn.disabled = false;}
 }
@@ -464,7 +459,7 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     try {
         const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
         const data = await res.json();
-        if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchAllData(); msg.innerText=''; }, 1000); } 
+        if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchInitialData(); msg.innerText=''; }, 1000); } 
         else { msg.classList.add('error'); msg.innerText = data.message; }
     } catch (err) { msg.classList.add('error'); msg.innerText = err.message; } 
     finally { btn.disabled = false; btn.innerText = '💾 บันทึกแก้ไข'; }
