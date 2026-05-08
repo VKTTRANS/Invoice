@@ -6,11 +6,11 @@ let sortCol = 'Invoice No.';
 let sortAsc = true; 
 let currentPage = 1;
 
-// --- ฟังก์ชันแปลงตัวเลขและใส่ลูกน้ำ ---
+// ฟังก์ชันแปลงตัวเลขและใส่ลูกน้ำ
 function parseNum(val) {
     if (!val) return 0;
     if (typeof val === 'number') return val;
-    let str = String(val).replace(/,/g, ''); // เอาลูกน้ำออกก่อนคำนวณ
+    let str = String(val).replace(/,/g, ''); 
     let num = parseFloat(str);
     return isNaN(num) ? 0 : num;
 }
@@ -18,7 +18,6 @@ function parseNum(val) {
 function formatNum(val) {
     return parseNum(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
-// ---------------------------------
 
 window.onload = async function() {
     setupEventListeners();
@@ -26,7 +25,6 @@ window.onload = async function() {
 };
 
 function setupEventListeners() {
-    // กำหนดช่องกรอกเงินทั้งหมดที่ต้องทำงาน
     const moneyFields = [
         'add-fee1', 'add-fee2', 'add-fee3', 'add-wh1', 'add-wh3', 'add-actualPay', 
         'det-fee1', 'det-fee2', 'det-fee3', 'det-wh1', 'det-wh3', 'det-actualPay'
@@ -36,44 +34,37 @@ function setupEventListeners() {
         const el = document.getElementById(id);
         if(!el) return;
 
-        // ฟังก์ชันเมื่อคลิกเข้าช่อง
         const handleFocus = function() {
             let val = parseNum(this.value);
             if (val === 0) {
-                this.value = ''; // ถ้าเป็นศูนย์ ล้างทิ้งให้ว่างเลย
+                this.value = ''; 
             } else {
-                this.value = val; // ถ้ามีเลขอยู่ ถอดลูกน้ำออกให้แก้เฉพาะตัวเลข
-                setTimeout(() => this.select(), 10); // คลุมดำเผื่อพิมพ์ทับ
+                this.value = val; 
+                setTimeout(() => this.select(), 10); 
             }
         };
 
-        // ดักจับทั้ง Focus และ Click เพื่อความชัวร์ในทุกเบราว์เซอร์
         el.addEventListener('focus', handleFocus);
         el.addEventListener('click', handleFocus);
 
-        // คำนวณแบบเรียลไทม์ตอนกำลังพิมพ์
         el.addEventListener('input', function() {
             let prefix = id.split('-')[0];
             if (id.includes('actualPay')) calculateDiff(prefix);
             else calculateTaxes(prefix, id.includes('wh') ? 'wh' : 'fee');
         });
 
-        // ฟังก์ชันเมื่อคลิกออกไปช่องอื่น
         el.addEventListener('blur', function() {
             if (this.value.trim() === '') {
-                this.value = '0.00'; // ถ้าปล่อยว่างไว้ ให้คืนค่า 0.00
+                this.value = '0.00'; 
             } else {
-                this.value = formatNum(this.value); // ใส่ลูกน้ำและทศนิยม .00
+                this.value = formatNum(this.value); 
             }
-            
-            // สั่งคำนวณย้ำอีกครั้ง
             let prefix = id.split('-')[0];
             if (id.includes('actualPay')) calculateDiff(prefix);
             else calculateTaxes(prefix, id.includes('wh') ? 'wh' : 'fee');
         });
     });
 
-    // ให้ปรับสถานะออโต้เมื่อใส่วันที่
     document.getElementById('det-payDate')?.addEventListener('change', function() {
         const statusField = document.getElementById('det-status');
         if (this.value !== "" && statusField.value === "ปกติ") {
