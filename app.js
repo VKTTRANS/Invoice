@@ -2,7 +2,6 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3eRovQMOuKuwK3m0zD
 let allInvoiceData = [];
 const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
-// เริ่มต้นเรียงลำดับ Invoice No. (0-9)
 let sortCol = 'Invoice No.';
 let sortAsc = true; 
 let currentPage = 1;
@@ -14,7 +13,7 @@ function showPage(pageId) {
     if(pageId === 'dashboard') { document.getElementById('btn-dashboard').classList.add('active'); renderDashboard(); }
     if(pageId === 'manage') { 
         document.getElementById('btn-manage').classList.add('active'); 
-        setInitialFilter(); // ตั้งค่าเดือนปัจจุบัน
+        setInitialFilter(); 
         renderManageInvoices(); 
     }
 }
@@ -121,6 +120,21 @@ function calculateTaxes(prefix) {
 }
 ['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add')));
 ['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det')));
+
+// ฟีเจอร์ใหม่: ถ้าใส่วันที่รับชำระ ให้ปรับสถานะเป็นรับชำระแล้วอัตโนมัติ
+document.getElementById('det-payDate')?.addEventListener('change', function() {
+    const statusField = document.getElementById('det-status');
+    if (this.value !== "" && statusField.value === "ปกติ") {
+        statusField.value = "รับชำระแล้ว";
+    }
+    toggleDetCancel();
+});
+document.getElementById('add-payDate')?.addEventListener('change', function() {
+    const statusField = document.getElementById('add-status');
+    if (this.value !== "" && statusField.value === "ปกติ") {
+        statusField.value = "รับชำระแล้ว";
+    }
+});
 
 function renderDashboard() {
     const selectedYear = document.getElementById('yearFilter').value;
@@ -258,7 +272,7 @@ function renderManageInvoices() {
             <td class="text-left">${row["ชื่อลูกค้า"]}</td>
             <td class="text-center">${du}</td>
             <td class="text-center">${row["ใช้โดย"]}</td>
-            <td class="text-left">${row["รายละเอียด"] || ''}</td>
+            <td class="detail-col">${row["รายละเอียด"] || ''}</td>
             <td>${fmt(row["ค่าตู้"])}</td>
             <td>${fmt(row["ค่าเที่ยว"])}</td>
             <td>${fmt(row["ค่าบริการ"])}</td>
@@ -278,7 +292,7 @@ function closeModal(modalId) { document.getElementById(modalId).style.display = 
 document.getElementById('invoiceForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-addSubmit'); const msg = document.getElementById('add-message');
-    btn.disabled = true; btn.innerText = 'บันทึก...'; msg.className = 'msg'; msg.innerText = '';
+    btn.disabled = true; btn.innerText = 'กำลังบันทึก...'; msg.className = 'msg'; msg.innerText = '';
     const payload = {
         action: 'add', invoiceNo: document.getElementById('add-invoiceNo').value, customer: document.getElementById('add-customer').value,
         useDate: document.getElementById('add-useDate').value, usedBy: document.getElementById('add-usedBy').value, details: document.getElementById('add-details').value,
@@ -293,10 +307,10 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
         if (data.status === 'success') { 
             msg.classList.add('success'); msg.innerText = data.message; 
             document.getElementById('invoiceForm').reset(); 
-            setTimeout(() => { closeModal('addModal'); fetchAllData(); }, 1000); 
+            setTimeout(() => { closeModal('addModal'); fetchAllData(); msg.innerText='';}, 1000); 
         } else { msg.classList.add('error'); msg.innerText = data.message; }
     } catch (err) { msg.classList.add('error'); msg.innerText = err.message; } 
-    finally { btn.disabled = false; btn.innerText = 'สร้างบิลใหม่'; }
+    finally { btn.disabled = false; btn.innerText = '💾 สร้างบิลใหม่'; }
 });
 
 function openDetailModal(invNo) {
@@ -335,7 +349,7 @@ async function deleteInvoice() {
     try {
         const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({action: 'delete', invoiceNo: invNo}), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
         const data = await res.json();
-        if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchAllData(); }, 1000); } 
+        if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchAllData(); msg.innerText='';}, 1000); } 
         else { msg.classList.add('error'); msg.innerText = data.message; btn.disabled = false;}
     } catch (err) { msg.classList.add('error'); msg.innerText = err.message; btn.disabled = false;}
 }
@@ -343,7 +357,7 @@ async function deleteInvoice() {
 document.getElementById('detailForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-detSubmit'); const msg = document.getElementById('det-message');
-    btn.disabled = true; btn.innerText = 'บันทึก...'; msg.className = 'msg'; msg.innerText = '';
+    btn.disabled = true; btn.innerText = 'กำลังบันทึก...'; msg.className = 'msg'; msg.innerText = '';
     const payload = {
         action: 'update', oldInvoiceNo: document.getElementById('det-oldInvNo').value,
         invoiceNo: document.getElementById('det-invoiceNo').value, customer: document.getElementById('det-customer').value,
@@ -356,7 +370,7 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     try {
         const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
         const data = await res.json();
-        if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchAllData(); }, 1000); } 
+        if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchAllData(); msg.innerText=''; }, 1000); } 
         else { msg.classList.add('error'); msg.innerText = data.message; }
     } catch (err) { msg.classList.add('error'); msg.innerText = err.message; } 
     finally { btn.disabled = false; btn.innerText = '💾 บันทึกแก้ไข'; }
