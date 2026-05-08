@@ -8,7 +8,6 @@ function showPage(pageId) {
     document.getElementById(pageId).classList.add('active-page');
     if(pageId === 'dashboard') { document.getElementById('btn-dashboard').classList.add('active'); renderDashboard(); }
     if(pageId === 'manage') { document.getElementById('btn-manage').classList.add('active'); renderManageInvoices(); }
-    if(pageId === 'history') { document.getElementById('btn-history').classList.add('active'); renderHistory(); }
 }
 
 window.onload = async function() {
@@ -24,7 +23,7 @@ async function fetchDropdowns() {
         if(data.users) { uList.innerHTML = ''; data.users.forEach(n => uList.innerHTML += `<option value="${n}">`); }
         const cList = document.getElementById('checkerList');
         if(data.checkers) { cList.innerHTML = ''; data.checkers.forEach(n => cList.innerHTML += `<option value="${n}">`); }
-    } catch(e) { console.error("CORS / Network Error:", e); }
+    } catch(e) { console.error("CORS Error - โปรดเช็คการ Deploy เป็น New Version", e); }
 }
 
 async function fetchAllData() {
@@ -40,46 +39,81 @@ async function fetchAllData() {
 
 function setupFilters() {
     const yFilter = document.getElementById('yearFilter');
-    const mFilter = document.getElementById('pendingMonthFilter');
-    const years = new Set();
-    const months = new Set();
+    const fltY = document.getElementById('flt-year');
+    const fltM = document.getElementById('flt-month');
+    const fltD = document.getElementById('flt-day');
+    const fltU = document.getElementById('flt-user');
+    const fltS = document.getElementById('flt-status');
+
+    const years = new Set(), months = new Set(), days = new Set(), users = new Set(), statuses = new Set();
     
     allInvoiceData.forEach(row => {
         if (row["วันที่ใช้งาน"]) {
             const d = new Date(row["วันที่ใช้งาน"]);
             if (!isNaN(d)) {
                 years.add(d.getFullYear());
-                let isPaid = (row["สถานะ"] === "รับชำระแล้ว" || (row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== ""));
-                if(!isPaid && row["สถานะ"] !== "ยกเลิก") months.add(d.getMonth());
+                months.add(d.getMonth());
+                days.add(d.getDate());
             }
         }
+        if (row["ใช้โดย"]) users.add(row["ใช้โดย"]);
+        if (row["สถานะ"]) statuses.add(row["สถานะ"]);
     });
 
-    yFilter.innerHTML = '';
-    const sortedYears = Array.from(years).sort((a, b) => b - a);
-    if (sortedYears.length === 0) yFilter.innerHTML = '<option value="all">ไม่มีข้อมูล</option>';
-    else sortedYears.forEach(y => yFilter.innerHTML += `<option value="${y}">${y}</option>`);
+    // Populate Filters
+    yFilter.innerHTML = fltY.innerHTML = '<option value="all">ปีทั้งหมด</option>';
+    Array.from(years).sort((a, b) => b - a).forEach(y => {
+        yFilter.innerHTML += `<option value="${y}">${y}</option>`;
+        fltY.innerHTML += `<option value="${y}">${y}</option>`;
+    });
 
-    mFilter.innerHTML = '<option value="all">ทุกเดือนที่ค้าง</option>';
-    Array.from(months).sort((a,b)=>a-b).forEach(m => mFilter.innerHTML += `<option value="${m}">${thaiMonths[m]}</option>`);
+    fltM.innerHTML = '<option value="all">เดือนทั้งหมด</option>';
+    Array.from(months).sort((a,b)=>a-b).forEach(m => fltM.innerHTML += `<option value="${m}">${thaiMonths[m]}</option>`);
+
+    fltD.innerHTML = '<option value="all">วันทั้งหมด</option>';
+    Array.from(days).sort((a,b)=>a-b).forEach(d => fltD.innerHTML += `<option value="${d}">${d}</option>`);
+
+    fltU.innerHTML = '<option value="all">คนลงข้อมูลทั้งหมด</option>';
+    Array.from(users).sort().forEach(u => fltU.innerHTML += `<option value="${u}">${u}</option>`);
+
+    fltS.innerHTML = '<option value="all">สถานะทั้งหมด</option>';
+    Array.from(statuses).sort().forEach(s => fltS.innerHTML += `<option value="${s}">${s}</option>`);
+    
+    // หากเคยเลือกล่าสุดไว้ ให้คืนค่า (เพื่อไม่ให้รีเซ็ตตอนโหลดใหม่)
+    if(yFilter.options.length > 1) {
+        let maxYear = Array.from(years).sort((a, b) => b - a)[0];
+        yFilter.value = maxYear;
+    }
 }
 
-// ระบบคำนวณภาษีอัติโนมัติ
+// คำนวณภาษีอัติโนมัติ (เพิ่มบิล)
 function calculateAddTaxes() {
-    let f1 = Number(document.getElementById('add-fee1').value) || 0; // ไม่หัก
-    let f2 = Number(document.getElementById('add-fee2').value) || 0; // หัก 1%
-    let f3 = Number(document.getElementById('add-fee3').value) || 0; // หัก 3%
-    
-    let wh1 = f2 * 0.01;
-    let wh3 = f3 * 0.03;
+    let f1 = Number(document.getElementById('add-fee1').value) || 0; 
+    let f2 = Number(document.getElementById('add-fee2').value) || 0; 
+    let f3 = Number(document.getElementById('add-fee3').value) || 0; 
+    let wh1 = f2 * 0.01; let wh3 = f3 * 0.03;
     let netPay = (f1 + f2 + f3) - wh1 - wh3;
-
     document.getElementById('add-wh1').value = wh1.toFixed(2);
     document.getElementById('add-wh3').value = wh3.toFixed(2);
     document.getElementById('add-totalPay').value = netPay.toFixed(2);
 }
 ['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id).addEventListener('input', calculateAddTaxes));
 
+// คำนวณภาษีอัติโนมัติ (อัปเดตบิล)
+function calculatePayTaxes() {
+    let f1 = Number(document.getElementById('pay-fee1').value) || 0; 
+    let f2 = Number(document.getElementById('pay-fee2').value) || 0; 
+    let f3 = Number(document.getElementById('pay-fee3').value) || 0; 
+    let wh1 = f2 * 0.01; let wh3 = f3 * 0.03;
+    let netPay = (f1 + f2 + f3) - wh1 - wh3;
+    document.getElementById('pay-wh1').value = wh1.toFixed(2);
+    document.getElementById('pay-wh3').value = wh3.toFixed(2);
+    document.getElementById('pay-totalPay').value = netPay.toFixed(2);
+}
+['pay-fee1', 'pay-fee2', 'pay-fee3'].forEach(id => document.getElementById(id).addEventListener('input', calculatePayTaxes));
+
+
+// 1. Dashboard Render
 function renderDashboard() {
     const selectedYear = document.getElementById('yearFilter').value;
     const tbody = document.getElementById('dashboard-body');
@@ -93,7 +127,7 @@ function renderDashboard() {
         if (row["สถานะ"] === "ยกเลิก") return;
         if (row["วันที่ใช้งาน"]) {
             const d = new Date(row["วันที่ใช้งาน"]);
-            if (!isNaN(d) && d.getFullYear().toString() === selectedYear) {
+            if (!isNaN(d) && (selectedYear === "all" || d.getFullYear().toString() === selectedYear)) {
                 const m = d.getMonth();
                 let f1 = Number(row["ค่าตู้"]) || 0; let f2 = Number(row["ค่าเที่ยว"]) || 0; let f3 = Number(row["ค่าบริการ"]) || 0;
                 let inc = f1 + f2 + f3;
@@ -121,52 +155,74 @@ function renderDashboard() {
     tfoot.innerHTML = `<tr><td class="text-center">รวม</td><td class="text-center">${t.count}</td><td>${fmt(t.f1)}</td><td>${fmt(t.f2)}</td><td>${fmt(t.f3)}</td><td>${fmt(t.inc)}</td><td>${fmt(t.w1)}</td><td>${fmt(t.w3)}</td><td>${fmt(t.toPay)}</td><td class="text-green">${fmt(t.paid)}</td><td class="text-red">${fmt(t.bal)}</td></tr>`;
 }
 
+// 2. Manage Invoices Render (ตาราง Master Data ทุกบิล)
 function renderManageInvoices() {
     const tbody = document.getElementById('manage-body');
-    const selectedMonth = document.getElementById('pendingMonthFilter').value;
+    const fYear = document.getElementById('flt-year').value;
+    const fMonth = document.getElementById('flt-month').value;
+    const fDay = document.getElementById('flt-day').value;
+    const fUser = document.getElementById('flt-user').value;
+    const fCust = document.getElementById('flt-customer').value.toLowerCase();
+    const fStat = document.getElementById('flt-status').value;
+
     tbody.innerHTML = '';
 
-    let pendingData = allInvoiceData.filter(row => {
-        let isPaid = (row["สถานะ"] === "รับชำระแล้ว" || (row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== ""));
-        if(isPaid || row["สถานะ"] === "ยกเลิก") return false;
-        if (selectedMonth !== "all" && row["วันที่ใช้งาน"]) {
+    let filteredData = allInvoiceData.filter(row => {
+        let match = true;
+        if (row["วันที่ใช้งาน"]) {
             const d = new Date(row["วันที่ใช้งาน"]);
-            return d.getMonth().toString() === selectedMonth;
-        }
-        return true;
-    });
+            if (!isNaN(d)) {
+                if (fYear !== "all" && d.getFullYear().toString() !== fYear) match = false;
+                if (fMonth !== "all" && d.getMonth().toString() !== fMonth) match = false;
+                if (fDay !== "all" && d.getDate().toString() !== fDay) match = false;
+            } else if (fYear !== "all" || fMonth !== "all" || fDay !== "all") { match = false; }
+        } else if (fYear !== "all" || fMonth !== "all" || fDay !== "all") { match = false; }
 
-    if (pendingData.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="text-center text-green">ไม่มีบิลค้างชำระ</td></tr>'; return; }
-
-    pendingData.forEach(row => {
-        let dateStr = row["วันที่ใช้งาน"] ? new Date(row["วันที่ใช้งาน"]).toLocaleDateString('th-TH') : '-';
-        let f1 = Number(row["ค่าตู้"]) || 0; let f2 = Number(row["ค่าเที่ยว"]) || 0; let f3 = Number(row["ค่าบริการ"]) || 0;
-        let w1 = Number(row["WH1%"]) || 0; let w3 = Number(row["WH3%"]) || 0;
-        let net = (f1 + f2 + f3) - w1 - w3;
+        if (fUser !== "all" && row["ใช้โดย"] !== fUser) match = false;
+        if (fCust !== "" && (!row["ชื่อลูกค้า"] || !row["ชื่อลูกค้า"].toLowerCase().includes(fCust))) match = false;
         
-        tbody.innerHTML += `<tr>
-            <td class="text-left"><strong>${row["Invoice No."]}</strong></td><td class="text-left">${row["ชื่อลูกค้า"]}</td><td class="text-center">${dateStr}</td><td class="text-center">${row["ใช้โดย"]}</td>
-            <td>${f1.toLocaleString('en-US', {minimumFractionDigits: 2})}</td><td>${f2.toLocaleString('en-US', {minimumFractionDigits: 2})}</td><td>${f3.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-            <td class="text-red" style="font-weight:bold;">${net.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-            <td class="text-center"><button class="action-btn" onclick="openPaymentModal('${row["Invoice No."]}')">รับชำระ</button></td></tr>`;
-    });
-}
+        let displayStatus = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
+        if (fStat !== "all" && displayStatus !== fStat) match = false;
 
-function renderHistory() {
-    const tbody = document.getElementById('history-body');
-    if (allInvoiceData.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray">ไม่พบข้อมูล</td></tr>'; return; }
-    tbody.innerHTML = '';
-    [...allInvoiceData].reverse().forEach(row => {
-        let dateStr = row["วันที่ใช้งาน"] ? new Date(row["วันที่ใช้งาน"]).toLocaleDateString('th-TH') : '-';
-        let isPaid = row["สถานะ"] === "รับชำระแล้ว" || (row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "");
-        let displayStatus = row["สถานะ"] || (isPaid ? 'รับชำระแล้ว' : 'ปกติ');
-        let total = isPaid ? (Number(row["ยอดชำระ"]) || 0).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-';
+        return match;
+    });
+
+    if (filteredData.length === 0) { tbody.innerHTML = '<tr><td colspan="18" class="text-center text-red">ไม่พบข้อมูลที่ค้นหา</td></tr>'; return; }
+
+    const fmt = (n) => Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2});
+
+    filteredData.forEach(row => {
+        let dateUseStr = row["วันที่ใช้งาน"] ? new Date(row["วันที่ใช้งาน"]).toLocaleDateString('th-TH') : '';
+        let dateCsStr = row["วันที่รับยอด CS"] ? new Date(row["วันที่รับยอด CS"]).toLocaleDateString('th-TH') : '';
+        let datePayStr = row["วันที่ได้รับชำระ"] ? new Date(row["วันที่ได้รับชำระ"]).toLocaleDateString('th-TH') : '';
+        let displayStatus = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
         let statusClass = displayStatus === 'ยกเลิก' ? 'text-red' : (displayStatus === 'รับชำระแล้ว' ? 'text-green' : '');
-        tbody.innerHTML += `<tr><td class="text-left">${row["Invoice No."]}</td><td class="text-left">${row["ชื่อลูกค้า"]}</td>
-            <td class="text-center">${dateStr}</td><td>${total}</td><td class="text-center"><span class="${statusClass}">${displayStatus}</span></td></tr>`;
+
+        tbody.innerHTML += `<tr>
+            <td class="text-center">${row["No."]}</td>
+            <td class="text-left"><strong>${row["Invoice No."]}</strong></td>
+            <td class="text-left">${row["ชื่อลูกค้า"]}</td>
+            <td class="text-center">${dateUseStr}</td>
+            <td class="text-center">${row["ใช้โดย"]}</td>
+            <td class="text-left">${row["รายละเอียด"] || ''}</td>
+            <td>${fmt(row["ค่าตู้"])}</td>
+            <td>${fmt(row["ค่าเที่ยว"])}</td>
+            <td>${fmt(row["ค่าบริการ"])}</td>
+            <td class="text-center">${dateCsStr}</td>
+            <td class="text-center">${datePayStr}</td>
+            <td>${fmt(row["WH1%"])}</td>
+            <td>${fmt(row["WH3%"])}</td>
+            <td style="font-weight:bold;">${fmt(row["ยอดชำระ"])}</td>
+            <td class="text-center"><span class="${statusClass}">${displayStatus}</span></td>
+            <td class="text-left text-red">${row["สาเหตุที่ยกเลิก"] || ''}</td>
+            <td class="text-center">${row["ผู้บันทึกการรับยอด"] || ''}</td>
+            <td class="text-center"><button class="action-btn" onclick="openPaymentModal('${row["Invoice No."]}')">อัปเดต</button></td>
+        </tr>`;
     });
 }
 
+
+// Modals Handling
 function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
 function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
 
@@ -193,16 +249,29 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
 function openPaymentModal(invNo) {
     const row = allInvoiceData.find(r => r["Invoice No."] === invNo);
     if(!row) return;
-    document.getElementById('modal-invNo').innerText = row["Invoice No."]; document.getElementById('modal-customer').innerText = row["ชื่อลูกค้า"];
+    document.getElementById('modal-invNo').innerText = row["Invoice No."]; 
+    document.getElementById('modal-customer').innerText = row["ชื่อลูกค้า"];
     document.getElementById('pay-invNo').value = row["Invoice No."];
     
-    let f1 = Number(row["ค่าตู้"]) || 0; let f2 = Number(row["ค่าเที่ยว"]) || 0; let f3 = Number(row["ค่าบริการ"]) || 0;
-    let wh1 = f2 * 0.01; let wh3 = f3 * 0.03; let total = (f1 + f2 + f3) - wh1 - wh3;
+    // ดึงข้อมูลเดิมมาโชว์ในช่องเพื่อให้แก้ได้
+    document.getElementById('pay-fee1').value = Number(row["ค่าตู้"]) || 0;
+    document.getElementById('pay-fee2').value = Number(row["ค่าเที่ยว"]) || 0;
+    document.getElementById('pay-fee3').value = Number(row["ค่าบริการ"]) || 0;
     
-    document.getElementById('pay-wh1').value = wh1.toFixed(2); document.getElementById('pay-wh3').value = wh3.toFixed(2); document.getElementById('pay-totalPay').value = total.toFixed(2);
+    // จัดรูปแบบวันที่สำหรับ input type="date"
+    let csD = "", payD = "";
+    if(row["วันที่รับยอด CS"]){ let d = new Date(row["วันที่รับยอด CS"]); if(!isNaN(d)) csD = d.toISOString().split('T')[0]; }
+    if(row["วันที่ได้รับชำระ"]){ let d = new Date(row["วันที่ได้รับชำระ"]); if(!isNaN(d)) payD = d.toISOString().split('T')[0]; }
     
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('pay-payDate').value = today; document.getElementById('pay-csDate').value = today;
+    document.getElementById('pay-csDate').value = csD;
+    document.getElementById('pay-payDate').value = payD;
+    document.getElementById('pay-checker').value = row["ผู้บันทึกการรับยอด"] || "";
+    document.getElementById('pay-status').value = row["สถานะ"] || "ปกติ";
+    document.getElementById('pay-cancelReason').value = row["สาเหตุที่ยกเลิก"] || "";
+    
+    calculatePayTaxes(); // คำนวณภาษีอิงจากค่าที่ดึงมา
+    toggleModalCancel();
+    
     document.getElementById('paymentModal').style.display = 'flex';
 }
 
@@ -216,7 +285,9 @@ document.getElementById('paymentForm').addEventListener('submit', async function
     const btn = document.getElementById('btn-paySubmit'); const msg = document.getElementById('modal-message');
     btn.disabled = true; btn.innerText = 'กำลังบันทึก...'; msg.className = 'msg'; msg.innerText = '';
     const payload = {
-        action: 'update', invoiceNo: document.getElementById('pay-invNo').value, csDate: document.getElementById('pay-csDate').value, payDate: document.getElementById('pay-payDate').value,
+        action: 'update', invoiceNo: document.getElementById('pay-invNo').value, 
+        fee1: document.getElementById('pay-fee1').value, fee2: document.getElementById('pay-fee2').value, fee3: document.getElementById('pay-fee3').value,
+        csDate: document.getElementById('pay-csDate').value, payDate: document.getElementById('pay-payDate').value,
         wh1: document.getElementById('pay-wh1').value, wh3: document.getElementById('pay-wh3').value, totalPay: document.getElementById('pay-totalPay').value,
         checker: document.getElementById('pay-checker').value, status: document.getElementById('pay-status').value, cancelReason: document.getElementById('pay-cancelReason').value
     };
@@ -225,5 +296,5 @@ document.getElementById('paymentForm').addEventListener('submit', async function
         const result = await response.json();
         if (result.status === 'success') { msg.classList.add('success'); msg.innerText = result.message; setTimeout(() => { closeModal('paymentModal'); fetchAllData(); showPage('manage'); }, 1000); } 
         else { msg.classList.add('error'); msg.innerText = result.message; }
-    } catch (err) { msg.classList.add('error'); msg.innerText = "Error: " + err.message; } finally { btn.disabled = false; btn.innerText = 'บันทึกชำระเงิน'; }
+    } catch (err) { msg.classList.add('error'); msg.innerText = "Error: " + err.message; } finally { btn.disabled = false; btn.innerText = 'บันทึกข้อมูล'; }
 });
