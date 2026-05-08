@@ -6,20 +6,63 @@ let sortCol = 'Invoice No.';
 let sortAsc = true; 
 let currentPage = 1;
 
+// --- ฟังก์ชันแปลงตัวเลขและใส่ลูกน้ำ ---
+function parseNum(val) {
+    if (!val) return 0;
+    if (typeof val === 'number') return val;
+    let str = String(val).replace(/,/g, ''); // เอาลูกน้ำออกก่อนคำนวณ
+    let num = parseFloat(str);
+    return isNaN(num) ? 0 : num;
+}
+
+function formatNum(val) {
+    return parseNum(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+// ---------------------------------
+
 window.onload = async function() {
     setupEventListeners();
     await fetchInitialData(); 
 };
 
 function setupEventListeners() {
-    ['add-fee1', 'add-fee2', 'add-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'fee')));
-    ['det-fee1', 'det-fee2', 'det-fee3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'fee')));
+    const moneyFields = ['add-fee1', 'add-fee2', 'add-fee3', 'add-wh1', 'add-wh3', 'add-actualPay', 'det-fee1', 'det-fee2', 'det-fee3', 'det-wh1', 'det-wh3', 'det-actualPay'];
+    
+    moneyFields.forEach(id => {
+        const el = document.getElementById(id);
+        if(!el) return;
 
-    ['add-wh1', 'add-wh3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('add', 'wh')));
-    ['det-wh1', 'det-wh3'].forEach(id => document.getElementById(id)?.addEventListener('input', () => calculateTaxes('det', 'wh')));
+        // 1. ตอนคลิกเข้าไปแก้ไข
+        el.addEventListener('focus', function() {
+            let val = parseNum(this.value);
+            if (val === 0) {
+                this.value = ''; // เคลียร์ศูนย์ออก พิมพ์สะดวก
+            } else {
+                this.value = val; // ถอดลูกน้ำออกชั่วคราว ให้แก้เลขง่ายๆ
+            }
+        });
 
-    document.getElementById('add-actualPay')?.addEventListener('input', () => calculateDiff('add'));
-    document.getElementById('det-actualPay')?.addEventListener('input', () => calculateDiff('det'));
+        // 2. ตอนพิมพ์ข้อมูล ระบบจะคำนวณแบบเรียลไทม์
+        el.addEventListener('input', function() {
+            let prefix = id.split('-')[0];
+            if (id.includes('actualPay')) calculateDiff(prefix);
+            else calculateTaxes(prefix, id.includes('wh') ? 'wh' : 'fee');
+        });
+
+        // 3. ตอนคลิกออก (พิมพ์เสร็จแล้ว) ใส่ลูกน้ำกลับเข้าไปให้สวยงาม
+        el.addEventListener('blur', function() {
+            if (this.value.trim() === '') {
+                this.value = '0.00'; // ถ้าปล่อยว่าง ให้กลับเป็น 0.00
+            } else {
+                this.value = formatNum(this.value);
+            }
+            
+            // สั่งคำนวณย้ำอีกครั้งเพื่อความเป๊ะ
+            let prefix = id.split('-')[0];
+            if (id.includes('actualPay')) calculateDiff(prefix);
+            else calculateTaxes(prefix, id.includes('wh') ? 'wh' : 'fee');
+        });
+    });
 
     document.getElementById('det-payDate')?.addEventListener('change', function() {
         const statusField = document.getElementById('det-status');
@@ -133,44 +176,43 @@ function resetFilters() {
 }
 
 function calculateTaxes(prefix, source = 'fee') {
-    let f1 = Number(document.getElementById(`${prefix}-fee1`).value) || 0; 
-    let f2 = Number(document.getElementById(`${prefix}-fee2`).value) || 0; 
-    let f3 = Number(document.getElementById(`${prefix}-fee3`).value) || 0; 
+    let f1 = parseNum(document.getElementById(`${prefix}-fee1`).value); 
+    let f2 = parseNum(document.getElementById(`${prefix}-fee2`).value); 
+    let f3 = parseNum(document.getElementById(`${prefix}-fee3`).value); 
     
     let subTotal = f1 + f2 + f3;
     let subTotalInput = document.getElementById(`${prefix}-subTotal`);
-    if(subTotalInput) subTotalInput.value = subTotal.toFixed(2);
+    if(subTotalInput) subTotalInput.value = formatNum(subTotal);
 
     let wh1Input = document.getElementById(`${prefix}-wh1`);
     let wh3Input = document.getElementById(`${prefix}-wh3`);
 
     if (source === 'fee') {
-        wh1Input.value = (f2 * 0.01).toFixed(2);
-        wh3Input.value = (f3 * 0.03).toFixed(2);
+        wh1Input.value = formatNum(f2 * 0.01);
+        wh3Input.value = formatNum(f3 * 0.03);
     }
     
-    let wh1 = Number(wh1Input.value) || 0;
-    let wh3 = Number(wh3Input.value) || 0;
+    let wh1 = parseNum(wh1Input.value);
+    let wh3 = parseNum(wh3Input.value);
     
     let expectedPay = subTotal - wh1 - wh3;
-    document.getElementById(`${prefix}-totalPay`).value = expectedPay.toFixed(2);
+    document.getElementById(`${prefix}-totalPay`).value = formatNum(expectedPay);
     
     calculateDiff(prefix);
 }
 
 function calculateDiff(prefix) {
-    let expectedPay = Number(document.getElementById(`${prefix}-totalPay`).value) || 0;
-    let actualPay = Number(document.getElementById(`${prefix}-actualPay`).value) || 0;
+    let expectedPay = parseNum(document.getElementById(`${prefix}-totalPay`).value);
+    let actualPay = parseNum(document.getElementById(`${prefix}-actualPay`).value);
     let diff = actualPay - expectedPay;
     
     let diffInput = document.getElementById(`${prefix}-diffPay`);
-    diffInput.value = diff.toFixed(2);
+    diffInput.value = formatNum(diff);
     
     if(diff < 0) diffInput.style.color = '#ef4444';
     else if(diff > 0) diffInput.style.color = '#10b981';
     else diffInput.style.color = '#0f172a';
 }
-
 
 function renderDashboard() {
     const selectedYear = document.getElementById('yearFilter').value;
@@ -347,6 +389,11 @@ function openAddModal() {
     document.getElementById('invoiceForm').reset();
     document.getElementById('add-invoiceNo').value = nextInv; 
     document.getElementById('add-status').value = "ปกติ"; 
+
+    // เซ็ตค่าเริ่มต้นให้เป็น 0.00 แทนที่จะเป็น 0
+    ['add-fee1', 'add-fee2', 'add-fee3', 'add-wh1', 'add-wh3', 'add-actualPay', 'add-subTotal', 'add-totalPay', 'add-diffPay'].forEach(id => {
+        document.getElementById(id).value = '0.00';
+    });
     
     document.getElementById('addModal').style.display = 'flex'; 
 }
@@ -357,15 +404,20 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
     e.preventDefault();
     const btn = document.getElementById('btn-addSubmit'); const msg = document.getElementById('add-message');
     btn.disabled = true; btn.innerText = 'กำลังบันทึก...'; msg.className = 'msg'; msg.innerText = '';
+    
+    // แปลงข้อมูลที่ติดลูกน้ำให้กลับเป็นตัวเลขก่อนส่งไปเซฟที่ Google Sheets
     const payload = {
         action: 'add', invoiceNo: document.getElementById('add-invoiceNo').value, customer: document.getElementById('add-customer').value,
         useDate: document.getElementById('add-useDate').value, usedBy: document.getElementById('add-usedBy').value, details: document.getElementById('add-details').value,
-        fee1: document.getElementById('add-fee1').value, fee2: document.getElementById('add-fee2').value, fee3: document.getElementById('add-fee3').value,
+        fee1: parseNum(document.getElementById('add-fee1').value), 
+        fee2: parseNum(document.getElementById('add-fee2').value), 
+        fee3: parseNum(document.getElementById('add-fee3').value),
         csDate: document.getElementById('add-csDate').value, payDate: document.getElementById('add-payDate').value,
-        wh1: document.getElementById('add-wh1').value, wh3: document.getElementById('add-wh3').value, 
-        totalPay: document.getElementById('add-totalPay').value,
-        actualPay: document.getElementById('add-actualPay').value,
-        diffPay: document.getElementById('add-diffPay').value,
+        wh1: parseNum(document.getElementById('add-wh1').value), 
+        wh3: parseNum(document.getElementById('add-wh3').value), 
+        totalPay: parseNum(document.getElementById('add-totalPay').value),
+        actualPay: parseNum(document.getElementById('add-actualPay').value),
+        diffPay: parseNum(document.getElementById('add-diffPay').value),
         status: document.getElementById('add-status').value
     };
     try {
@@ -388,12 +440,13 @@ function openDetailModal(invNo) {
     document.getElementById('det-customer').value = row["ชื่อลูกค้า"];
     document.getElementById('det-usedBy').value = row["ใช้โดย"];
     document.getElementById('det-details').value = row["รายละเอียด"] || "";
-    document.getElementById('det-fee1').value = Number(row["ค่าตู้"]) || 0;
-    document.getElementById('det-fee2').value = Number(row["ค่าเที่ยว"]) || 0;
-    document.getElementById('det-fee3').value = Number(row["ค่าบริการ"]) || 0;
     
-    document.getElementById('det-wh1').value = Number(row["WH1%"]) || 0;
-    document.getElementById('det-wh3').value = Number(row["WH3%"]) || 0;
+    // ดึงค่ามาจัด format ให้มีลูกน้ำ
+    document.getElementById('det-fee1').value = formatNum(row["ค่าตู้"]);
+    document.getElementById('det-fee2').value = formatNum(row["ค่าเที่ยว"]);
+    document.getElementById('det-fee3').value = formatNum(row["ค่าบริการ"]);
+    document.getElementById('det-wh1').value = formatNum(row["WH1%"]);
+    document.getElementById('det-wh3').value = formatNum(row["WH3%"]);
     
     const sd = (v) => v ? new Date(v).toISOString().split('T')[0] : "";
     document.getElementById('det-useDate').value = sd(row["วันที่ใช้งาน"]);
@@ -401,7 +454,8 @@ function openDetailModal(invNo) {
     document.getElementById('det-payDate').value = sd(row["วันที่ได้รับชำระ"]);
     document.getElementById('det-checker').value = row["ผู้บันทึกการรับยอด"] || "";
     
-    document.getElementById('det-actualPay').value = row["ยอดรับชำระจริง"] !== undefined && row["ยอดรับชำระจริง"] !== "" ? row["ยอดรับชำระจริง"] : row["ยอดชำระ"];
+    let actualPay = row["ยอดรับชำระจริง"] !== undefined && row["ยอดรับชำระจริง"] !== "" ? row["ยอดรับชำระจริง"] : row["ยอดชำระ"];
+    document.getElementById('det-actualPay').value = formatNum(actualPay);
 
     document.getElementById('det-status').value = row["สถานะ"] || ((row["วันที่ได้รับชำระ"] && row["วันที่ได้รับชำระ"].toString().trim() !== "") ? 'รับชำระแล้ว' : 'ปกติ');
     document.getElementById('det-cancelReason').value = row["สาเหตุที่ยกเลิก"] || "";
@@ -434,16 +488,21 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     e.preventDefault();
     const btn = document.getElementById('btn-detSubmit'); const msg = document.getElementById('det-message');
     btn.disabled = true; btn.innerText = 'กำลังบันทึก...'; msg.className = 'msg'; msg.innerText = '';
+    
+    // แปลงข้อมูลที่ติดลูกน้ำให้กลับเป็นตัวเลขก่อนส่งไปเซฟ
     const payload = {
         action: 'update', oldInvoiceNo: document.getElementById('det-oldInvNo').value,
         invoiceNo: document.getElementById('det-invoiceNo').value, customer: document.getElementById('det-customer').value,
         useDate: document.getElementById('det-useDate').value, usedBy: document.getElementById('det-usedBy').value, details: document.getElementById('det-details').value,
-        fee1: document.getElementById('det-fee1').value, fee2: document.getElementById('det-fee2').value, fee3: document.getElementById('det-fee3').value,
+        fee1: parseNum(document.getElementById('det-fee1').value), 
+        fee2: parseNum(document.getElementById('det-fee2').value), 
+        fee3: parseNum(document.getElementById('det-fee3').value),
         csDate: document.getElementById('det-csDate').value, payDate: document.getElementById('det-payDate').value,
-        wh1: document.getElementById('det-wh1').value, wh3: document.getElementById('det-wh3').value, 
-        totalPay: document.getElementById('det-totalPay').value,
-        actualPay: document.getElementById('det-actualPay').value,
-        diffPay: document.getElementById('det-diffPay').value,
+        wh1: parseNum(document.getElementById('det-wh1').value), 
+        wh3: parseNum(document.getElementById('det-wh3').value), 
+        totalPay: parseNum(document.getElementById('det-totalPay').value),
+        actualPay: parseNum(document.getElementById('det-actualPay').value),
+        diffPay: parseNum(document.getElementById('det-diffPay').value),
         checker: document.getElementById('det-checker').value, status: document.getElementById('det-status').value, cancelReason: document.getElementById('det-cancelReason').value
     };
     try {
@@ -455,9 +514,6 @@ document.getElementById('detailForm').addEventListener('submit', async function(
     finally { btn.disabled = false; btn.innerText = '💾 บันทึกแก้ไข'; }
 });
 
-// ==========================================
-// ฟังก์ชันดึงข้อมูลจาก Web App (Sheet) ตัวเก่า
-// ==========================================
 async function syncOldData() {
     const btn = document.getElementById('btn-sync');
     btn.disabled = true;
