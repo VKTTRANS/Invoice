@@ -1,7 +1,6 @@
 // ใส่ Web App URL ของคุณเรียบร้อยแล้ว
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3eRovQMOuKuwK3m0zDheFJOYqkreQMDmXfMlk-_8_43Fwr5z9HV8hULsQkJr4BRdP/exec";
 
-// ฟังก์ชันสลับหน้าต่าง
 function showPage(pageId) {
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active-page'));
     document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
@@ -20,7 +19,6 @@ function showPage(pageId) {
     }
 }
 
-// ควบคุมการแสดงผลช่อง 'สาเหตุที่ยกเลิก'
 function toggleCancelReason() {
     const status = document.getElementById('status').value;
     const cancelGroup = document.getElementById('cancelGroup');
@@ -35,7 +33,6 @@ function toggleCancelReason() {
     }
 }
 
-// โหลดข้อมูลรายชื่อ (Datalist) ทันทีที่เปิดเว็บ
 window.onload = async function() {
     try {
         const response = await fetch(`${SCRIPT_URL}?action=getDropdowns`);
@@ -43,19 +40,11 @@ window.onload = async function() {
         
         const usedByList = document.getElementById('usedByList');
         usedByList.innerHTML = '';
-        if(data.users) {
-            data.users.forEach(name => {
-                usedByList.innerHTML += `<option value="${name}">`;
-            });
-        }
+        if(data.users) data.users.forEach(name => usedByList.innerHTML += `<option value="${name}">`);
 
         const checkerList = document.getElementById('checkerList');
         checkerList.innerHTML = '';
-        if(data.checkers) {
-            data.checkers.forEach(name => {
-                checkerList.innerHTML += `<option value="${name}">`;
-            });
-        }
+        if(data.checkers) data.checkers.forEach(name => checkerList.innerHTML += `<option value="${name}">`);
         
         fetchDashboardData();
     } catch (error) {
@@ -63,25 +52,105 @@ window.onload = async function() {
     }
 };
 
-// ดึงข้อมูล Dashboard
+// ==========================================
+// ฟังก์ชันคำนวณและแสดงผล Dashboard แยกรายเดือน
+// ==========================================
 async function fetchDashboardData() {
+    const tbody = document.getElementById('dashboard-body');
+    const tfoot = document.getElementById('dashboard-foot');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>';
+    tfoot.innerHTML = '';
+
     try {
         const response = await fetch(`${SCRIPT_URL}?action=getData`);
         const data = await response.json();
-        
-        document.getElementById('dash-count').innerText = data.length;
-        
-        const totalPaid = data
-            .filter(row => row["สถานะ"] === "รับชำระแล้ว")
-            .reduce((sum, row) => sum + (Number(row["ยอดชำระ"]) || 0), 0);
-            
-        document.getElementById('dash-total').innerText = totalPaid.toLocaleString('th-TH', {minimumFractionDigits: 2});
+
+        const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+        // สร้างโครงสร้างเก็บข้อมูล 12 เดือน
+        let monthlyData = Array.from({length: 12}, (_, i) => ({
+            monthName: thaiMonths[i],
+            count: 0,
+            boxFee: 0,
+            transportFee: 0,
+            serviceFee: 0,
+            totalIncome: 0,
+            paidAmount: 0
+        }));
+
+        // ตัวแปรเก็บผลรวมทั้งปี
+        let total = { count: 0, boxFee: 0, transportFee: 0, serviceFee: 0, income: 0, paid: 0 };
+
+        // คำนวณข้อมูลทีละบรรทัด
+        data.forEach(row => {
+            // ไม่นำบิลที่ "ยกเลิก" มาคำนวณเป็นรายได้
+            if (row["สถานะ"] === "ยกเลิก") return;
+
+            let dateVal = row["วันที่ใช้งาน"]; // ใช้วันที่ใช้งานเป็นเกณฑ์แยกเดือน
+            if (dateVal) {
+                let d = new Date(dateVal);
+                if (!isNaN(d)) {
+                    let m = d.getMonth(); // ได้เลข 0-11
+                    
+                    let f1 = Number(row["ค่าตู้"]) || 0;
+                    let f2 = Number(row["ค่าเที่ยว"]) || 0;
+                    let f3 = Number(row["ค่าบริการ"]) || 0;
+                    let income = f1 + f2 + f3;
+                    let paid = row["สถานะ"] === "รับชำระแล้ว" ? (Number(row["ยอดชำระ"]) || 0) : 0;
+
+                    monthlyData[m].count++;
+                    monthlyData[m].boxFee += f1;
+                    monthlyData[m].transportFee += f2;
+                    monthlyData[m].serviceFee += f3;
+                    monthlyData[m].totalIncome += income;
+                    monthlyData[m].paidAmount += paid;
+
+                    // บวกเข้าผลรวมทั้งปี
+                    total.count++;
+                    total.boxFee += f1;
+                    total.transportFee += f2;
+                    total.serviceFee += f3;
+                    total.income += income;
+                    total.paid += paid;
+                }
+            }
+        });
+
+        // นำข้อมูลไปแสดงผลในตาราง
+        tbody.innerHTML = '';
+        monthlyData.forEach(m => {
+            tbody.innerHTML += `
+                <tr>
+                    <td style="text-align:center;">${m.monthName}</td>
+                    <td style="text-align:center;">${m.count}</td>
+                    <td style="text-align:right;">${m.boxFee.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align:right;">${m.transportFee.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align:right;">${m.serviceFee.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align:right;">${m.totalIncome.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align:right; color:#27ae60; font-weight:bold;">${m.paidAmount.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                </tr>
+            `;
+        });
+
+        // แสดงผลรวมด้านล่างสุด
+        tfoot.innerHTML = `
+            <tr>
+                <td style="text-align:center;">รวมทั้งสิ้น</td>
+                <td style="text-align:center;">${total.count}</td>
+                <td style="text-align:right;">${total.boxFee.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                <td style="text-align:right;">${total.transportFee.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                <td style="text-align:right;">${total.serviceFee.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                <td style="text-align:right;">${total.income.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                <td style="text-align:right; color:#27ae60;">${total.paid.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            </tr>
+        `;
+
     } catch (error) {
         console.error("Error fetching dashboard:", error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">โหลดข้อมูลล้มเหลว โปรดรีเฟรช</td></tr>';
     }
 }
 
-// ดึงข้อมูลหน้าประวัติย้อนหลัง
 async function fetchHistoryData() {
     const tbody = document.getElementById('history-body');
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>';
@@ -91,7 +160,6 @@ async function fetchHistoryData() {
         const data = await response.json();
         tbody.innerHTML = '';
         
-        // แสดงจากข้อมูลล่าสุดไปเก่าสุด
         data.reverse().forEach(row => {
             let dateStr = '-';
             if (row["วันที่ใช้งาน"]) {
@@ -115,7 +183,6 @@ async function fetchHistoryData() {
     }
 }
 
-// ส่งข้อมูลเมื่อกดปุ่ม Submit (POST)
 document.getElementById('invoiceForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btn = document.getElementById('submitBtn');
@@ -149,7 +216,7 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             body: JSON.stringify(payload),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' } // ใช้ text/plain เลี่ยงปัญหา CORS ของ Google
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
         });
         
         const result = await response.json();
@@ -160,7 +227,6 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
             document.getElementById('invoiceForm').reset();
             toggleCancelReason(); 
             
-            // สั่งโหลดรายชื่อ Datalist ใหม่ กรณีที่มีคนพิมพ์ชื่อใหม่เข้ามา
             setTimeout(() => {
                 window.onload();
             }, 500);
