@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice Transport System</title>
+    <title>VKT Transport Invoice</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,21 +18,21 @@
 
     <div id="dashboard" class="page-content active-page">
         <div class="dashboard-header">
-            <h3>สรุปยอดรับชำระ </h3>
+            <h3>สรุปยอดรับชำระ</h3>
             <div class="filter-group">
-                <label for="yearFilter">เลือกปี: </label>
+                <label for="yearFilter">เลือกปี:</label>
                 <select id="yearFilter" onchange="renderDashboard()">
                     <option value="all">-- กำลังโหลด --</option>
                 </select>
             </div>
         </div>
 
-        <div style="overflow-x:auto;">
-            <table class="data-table dashboard-table">
+        <div class="table-container">
+            <table class="data-table">
                 <thead>
                     <tr>
-                        <th class="bg-orange" style="text-align: center;">เดือน</th>
-                        <th class="bg-orange" style="text-align: center;">จำนวน Inv</th>
+                        <th class="bg-orange text-center">เดือน</th>
+                        <th class="bg-orange text-center">จำนวน Inv</th>
                         <th class="bg-orange">ยอดรวมค่ารับตู้-คืนตู้</th>
                         <th class="bg-orange">ยอดรวมค่าขนส่ง</th>
                         <th class="bg-orange">ยอดรวมค่าบริการ</th>
@@ -41,25 +41,27 @@
                         <th class="bg-green">WHT3%</th>
                         <th class="bg-green">ยอดรับชำระทั้งหมด</th>
                         <th class="bg-green">ยอดรับชำระแล้ว</th>
-                        <th class="bg-green" style="color:#ffcccc;">ยอดรับคงเหลือ</th>
+                        <th class="bg-green">ยอดรับคงเหลือ</th>
                     </tr>
                 </thead>
                 <tbody id="dashboard-body">
-                    <tr><td colspan="11" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>
+                    <tr><td colspan="11" class="text-center text-gray">กำลังโหลดข้อมูล...</td></tr>
                 </tbody>
                 <tfoot id="dashboard-foot">
-                    </tfoot>
+                </tfoot>
             </table>
         </div>
     </div>
 
     <div id="add-invoice" class="page-content">
-        <h3>บันทึก Invoice ใหม่</h3>
+        <div class="dashboard-header">
+            <h3>บันทึก Invoice ใหม่</h3>
+        </div>
         <form id="invoiceForm">
             <div class="form-grid">
                 <div class="form-group"><label>Invoice No. *</label><input type="text" id="invoiceNo" required></div>
                 <div class="form-group"><label>ชื่อลูกค้า *</label><input type="text" id="customer" required></div>
-                <div class="form-group"><label>วันที่ใช้งาน</label><input type="date" id="useDate"></div>
+                <div class="form-group"><label>วันที่ใช้งาน *</label><input type="date" id="useDate" required></div>
                 <div class="form-group">
                     <label>ใช้โดย (คนลงข้อมูล) *</label>
                     <input type="text" id="usedBy" list="usedByList" required placeholder="พิมพ์ชื่อใหม่ หรือเลือกจากรายการ">
@@ -100,20 +102,22 @@
     </div>
 
     <div id="history" class="page-content">
-        <h3>ประวัติ Invoice ล่าสุด</h3>
-        <div style="overflow-x:auto;">
+        <div class="dashboard-header">
+            <h3>ประวัติ Invoice ล่าสุด</h3>
+        </div>
+        <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Invoice No.</th>
-                        <th>ลูกค้า</th>
-                        <th>วันที่ใช้งาน</th>
-                        <th>ยอดชำระ</th>
-                        <th>สถานะ</th>
+                        <th class="bg-orange text-left">Invoice No.</th>
+                        <th class="bg-orange text-left">ลูกค้า</th>
+                        <th class="bg-orange text-center">วันที่ใช้งาน</th>
+                        <th class="bg-orange">ยอดชำระ</th>
+                        <th class="bg-orange text-center">สถานะ</th>
                     </tr>
                 </thead>
                 <tbody id="history-body">
-                    <tr><td colspan="5" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>
+                    <tr><td colspan="5" class="text-center text-gray">กำลังโหลดข้อมูล...</td></tr>
                 </tbody>
             </table>
         </div>
