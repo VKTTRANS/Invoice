@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3eRovQMOuKuwK3m0zDheFJOYqkreQMDmXfMlk-_8_43Fwr5z9HV8hULsQkJr4BRdP/exec";
+const SCRIPT_URL = "ใส่_ลิงก์_WEB_APP_อันใหม่ล่าสุด_ตรงนี้ครับ";
 let allInvoiceData = [];
 const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
@@ -6,7 +6,6 @@ let sortCol = 'Invoice No.';
 let sortAsc = true; 
 let currentPage = 1;
 
-// ฟังก์ชันแปลงตัวเลขและใส่ลูกน้ำ
 function parseNum(val) {
     if (!val) return 0;
     if (typeof val === 'number') return val;
@@ -104,7 +103,7 @@ function setInitialFilter() {
 
 async function fetchInitialData() {
     try {
-        const res = await fetch(`${SCRIPT_URL}?action=getInitialData`);
+        const res = await fetch(`${SCRIPT_URL}?action=getInitialData`, { redirect: 'follow' });
         const data = await res.json();
         
         const uList = document.getElementById('usedByList');
@@ -420,14 +419,19 @@ document.getElementById('invoiceForm').addEventListener('submit', async function
         status: document.getElementById('add-status').value
     };
     try {
-        const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+        const res = await fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            redirect: 'follow', // ป้องกัน Error การดักจับของเบราว์เซอร์
+            body: JSON.stringify(payload), 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
+        });
         const data = await res.json();
         if (data.status === 'success') { 
             msg.classList.add('success'); msg.innerText = data.message; 
             document.getElementById('invoiceForm').reset(); 
             setTimeout(() => { closeModal('addModal'); fetchInitialData(); msg.innerText='';}, 1000); 
         } else { msg.classList.add('error'); msg.innerText = data.message; }
-    } catch (err) { msg.classList.add('error'); msg.innerText = err.message; } 
+    } catch (err) { msg.classList.add('error'); msg.innerText = "เชื่อมต่อขัดข้อง: " + err.message; } 
     finally { btn.disabled = false; btn.innerText = '💾 สร้างบิลใหม่'; }
 });
 
@@ -475,11 +479,16 @@ async function deleteInvoice() {
     const btn = document.getElementById('btn-detSubmit'); const msg = document.getElementById('det-message');
     btn.disabled = true; msg.className = 'msg'; msg.innerText = 'กำลังลบ...'; msg.style.display = 'block';
     try {
-        const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({action: 'delete', invoiceNo: invNo}), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+        const res = await fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            redirect: 'follow',
+            body: JSON.stringify({action: 'delete', invoiceNo: invNo}), 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
+        });
         const data = await res.json();
         if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchInitialData(); msg.innerText='';}, 1000); } 
         else { msg.classList.add('error'); msg.innerText = data.message; btn.disabled = false;}
-    } catch (err) { msg.classList.add('error'); msg.innerText = err.message; btn.disabled = false;}
+    } catch (err) { msg.classList.add('error'); msg.innerText = "เชื่อมต่อขัดข้อง: " + err.message; btn.disabled = false;}
 }
 
 document.getElementById('detailForm').addEventListener('submit', async function(e) {
@@ -503,33 +512,42 @@ document.getElementById('detailForm').addEventListener('submit', async function(
         checker: document.getElementById('det-checker').value, status: document.getElementById('det-status').value, cancelReason: document.getElementById('det-cancelReason').value
     };
     try {
-        const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+        const res = await fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            redirect: 'follow',
+            body: JSON.stringify(payload), 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
+        });
         const data = await res.json();
         if (data.status === 'success') { msg.classList.add('success'); msg.innerText = data.message; setTimeout(() => { closeModal('detailModal'); fetchInitialData(); msg.innerText=''; }, 1000); } 
         else { msg.classList.add('error'); msg.innerText = data.message; }
-    } catch (err) { msg.classList.add('error'); msg.innerText = err.message; } 
+    } catch (err) { msg.classList.add('error'); msg.innerText = "เชื่อมต่อขัดข้อง: " + err.message; } 
     finally { btn.disabled = false; btn.innerText = '💾 บันทึกแก้ไข'; }
 });
 
-// 🚀 แก้ไขฟังก์ชันดึงข้อมูลจากระบบเก่าเป็น GET Request เพื่อแก้ปัญหา Failed to Fetch
 async function syncOldData() {
     const btn = document.getElementById('btn-sync');
     btn.disabled = true;
     btn.innerText = '⏳ กำลังดึงข้อมูล...';
 
     try {
-        // ใช้ GET request ผ่าน query parameter แก้ปัญหา CORS ที่เจอตอนทำ POST
-        const res = await fetch(`${SCRIPT_URL}?action=syncOldData`);
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            redirect: 'follow', // สำคัญมาก ป้องกัน Failed to fetch
+            body: JSON.stringify({ action: 'syncOldData' }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        
         const data = await res.json();
         
         if (data.status === 'success') {
             alert(data.message);
             await fetchInitialData(); 
         } else {
-            alert("❌ เกิดข้อผิดพลาด: " + data.message);
+            alert("❌ เกิดข้อผิดพลาดฝั่งระบบ: " + data.message);
         }
     } catch (err) {
-        alert("❌ การเชื่อมต่อขัดข้อง: " + err.message);
+        alert("❌ การเชื่อมต่อขัดข้อง: " + err.message + "\n(กรุณาเช็คว่าเอา URL ตัวใหม่มาใส่และกด Deploy ใน Apps Script แล้ว)");
     } finally {
         btn.disabled = false;
         btn.innerText = '🔄 ดึงบิลจากระบบเก่า';
