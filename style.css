@@ -40,10 +40,16 @@ body { background-color: #f3f4f6; color: #1f2937; overflow-x: hidden; }
 .data-table th { padding: 8px 6px; text-align: center !important; border: 1px solid #e2e8f0; }
 .data-table td { padding: 6px 8px; text-align: right; border: 1px solid #e2e8f0; }
 
-/* ปรับขนาดคอลัมน์ให้สมส่วน */
+/* ปรับขนาดคอลัมน์ให้สมส่วน และจัดการตัดคำยาวๆ */
 .col-no { width: 30px; text-align: center !important;}
 .col-inv { width: 80px; text-align: center !important;}
-.col-text { text-align: left !important; }
+.col-text { 
+    max-width: 150px; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    text-align: left !important; 
+}
 .col-date { width: 70px; text-align: center !important;}
 .detail-col { white-space: normal; min-width: 150px; text-align: left !important; }
 
